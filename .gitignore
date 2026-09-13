@@ -1,0 +1,40 @@
+# Gradle
+.gradle/
+build/
+**/build/
+
+# Local config (cada maquina tiene el suyo, ver markdown.md)
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+.kotlin/
+
+# Base de datos de desarrollo del servidor (se regenera sola con ./gradlew :server:run)
+server/data/
+
+# Room: los .json de schemas SI se versionan (ayudan a revisar migraciones), pero no
+# ficheros .db sueltos que se puedan colar en el repo por error.
+*.db
+*.db-journal
+*.mv.db
+*.trace.db
+
+# Xcode / iOS (ver iosApp/README.md: el proyecto real no se puede generar en Windows)
+iosApp/**/*.xcuserstate
+iosApp/**/xcuserdata/
+iosApp/**/DerivedData/
+
+# Logs y artefactos de ejecucion local
+*.log
+*.hprof
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Cache de herramientas locales (no es parte del proyecto)
+.atl/
+.vscode/*.log
+

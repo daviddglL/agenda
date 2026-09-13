@@ -1,0 +1,65 @@
+{
+  // Tareas para trabajar el proyecto desde Visual Studio Code (Terminal > Run Task...,
+  // o Ctrl+Shift+P > "Tasks: Run Task"). Orden normal para ver la app: 1 -> 2 -> 3.
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "1. Servidor Ktor (http://localhost:8080)",
+      "detail": "Arranca el backend con H2 en fichero. Dejalo abierto mientras usas la app.",
+      "type": "shell",
+      "command": ".\\gradlew.bat",
+      "args": [":server:run", "--console=plain"],
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "group": "agenda", "clear": true }
+    },
+    {
+      "label": "2. Emulador Android (Pixel_6a)",
+      "detail": "Arranca el AVD. Si no se llama Pixel_6a, mira la lista con 'Emuladores: listar AVDs'.",
+      "type": "shell",
+      "command": "& \"$env:LOCALAPPDATA\\Android\\Sdk\\emulator\\emulator.exe\" -avd Pixel_6a -netdelay none -netspeed full",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "group": "agenda" }
+    },
+    {
+      "label": "3. Instalar y abrir la app en el emulador",
+      "detail": "Compila el APK debug, lo instala en el emulador ya arrancado y lanza la actividad.",
+      "type": "shell",
+      "command": "& \"$env:LOCALAPPDATA\\Android\\Sdk\\platform-tools\\adb.exe\" wait-for-device; .\\gradlew.bat :androidApp:installDebug --console=plain; & \"$env:LOCALAPPDATA\\Android\\Sdk\\platform-tools\\adb.exe\" shell am start -n com.daviddelgado.agenda/com.daviddelgado.agenda.android.MainActivity",
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "group": "agenda" }
+    },
+    {
+      "label": "Emuladores: listar AVDs",
+      "detail": "Nombres de emulador disponibles en este PC.",
+      "type": "shell",
+      "command": "& \"$env:LOCALAPPDATA\\Android\\Sdk\\emulator\\emulator.exe\" -list-avds",
+      "problemMatcher": []
+    },
+    {
+      "label": "Logs de la app (logcat)",
+      "detail": "Solo las lineas del proceso de la app, util para ver errores de red o de Koin.",
+      "type": "shell",
+      "command": "& \"$env:LOCALAPPDATA\\Android\\Sdk\\platform-tools\\adb.exe\" logcat --pid=(& \"$env:LOCALAPPDATA\\Android\\Sdk\\platform-tools\\adb.exe\" shell pidof com.daviddelgado.agenda)",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Tests: todos (ktlint + detekt + unitarios)",
+      "detail": "Equivale a ./gradlew check: compila todo, analisis estatico y los 119 tests.",
+      "type": "shell",
+      "command": ".\\gradlew.bat",
+      "args": ["check", "--console=plain"],
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Tests: solo servidor",
+      "type": "shell",
+      "command": ".\\gradlew.bat",
+      "args": [":server:test", "--console=plain"],
+      "problemMatcher": []
+    }
+  ]
+}

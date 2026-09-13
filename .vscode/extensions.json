@@ -1,0 +1,10 @@
+{
+  // Extensiones recomendadas para tocar este proyecto desde VS Code.
+  // VS Code las ofrece al abrir la carpeta (Extensiones > "Recomendadas").
+  "recommendations": [
+    "fwcd.kotlin",
+    "vscjava.vscode-gradle",
+    "vscjava.vscode-java-pack",
+    "DiemasMichiels.emulate"
+  ]
+}

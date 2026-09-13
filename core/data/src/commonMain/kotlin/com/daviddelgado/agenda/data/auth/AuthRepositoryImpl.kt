@@ -1,0 +1,77 @@
+package com.daviddelgado.agenda.data.auth
+
+import com.daviddelgado.agenda.database.PendingDeletionDao
+import com.daviddelgado.agenda.database.TaskDao
+import com.daviddelgado.agenda.domain.model.User
+import com.daviddelgado.agenda.domain.repository.AuthRepository
+import com.daviddelgado.agenda.network.TokenProvider
+import com.daviddelgado.agenda.network.api.AuthApi
+import com.daviddelgado.agenda.network.dto.AuthResponse
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+
+/**
+ * Habla con `/auth` y `/users` del modulo :server a traves de [AuthApi] y guarda el par de
+ * tokens en almacenamiento cifrado via [TokenProvider]. El usuario actual se expone como
+ * [StateFlow] para que la navegacion reaccione al login/logout.
+ */
+class AuthRepositoryImpl(
+    private val authApi: AuthApi,
+    private val tokenProvider: TokenProvider,
+    private val taskDao: TaskDao,
+    private val pendingDeletionDao: PendingDeletionDao,
+) : AuthRepository {
+    private val currentUser = MutableStateFlow<User?>(null)
+
+    override fun observeCurrentUser(): StateFlow<User?> = currentUser
+
+    override suspend fun login(
+        email: String,
+        password: String,
+    ): Result<User> = runCatching { onAuthSuccess(authApi.login(email, password)) }
+
+    override suspend fun register(
+        name: String,
+        email: String,
+        password: String,
+    ): Result<User> = runCatching { onAuthSuccess(authApi.register(name, email, password)) }
+
+    override suspend fun logout() {
+        tokenProvider.clear()
+        authApi.forgetCachedTokens()
+        currentUser.value = null
+        // La base local es de la sesion que se cierra: no debe verla el siguiente usuario.
+        clearLocalData()
+    }
+
+    override suspend fun deleteAccount(): Result<Unit> =
+        runCatching {
+            authApi.deleteAccount()
+            // Borrado conjunto local: cascada servidor + Room en el mismo flujo.
+            clearLocalData()
+            tokenProvider.clear()
+            authApi.forgetCachedTokens()
+            currentUser.value = null
+        }
+
+    override suspend fun restoreSession(): User? {
+        if (tokenProvider.accessToken() == null) return null
+        return runCatching { authApi.me() }
+            .map { User(it.id, it.name, it.email) }
+            .onSuccess { currentUser.value = it }
+            .getOrNull()
+    }
+
+    private suspend fun clearLocalData() {
+        taskDao.deleteAll()
+        pendingDeletionDao.deleteAll()
+    }
+
+    private fun onAuthSuccess(response: AuthResponse): User {
+        tokenProvider.saveTokens(response.accessToken, response.refreshToken)
+        authApi.forgetCachedTokens()
+        val user = User(response.userId, response.name, response.email)
+        currentUser.value = user
+        return user
+    }
+}

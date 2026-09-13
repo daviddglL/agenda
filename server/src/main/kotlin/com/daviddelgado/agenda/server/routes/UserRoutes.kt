@@ -1,0 +1,33 @@
+package com.daviddelgado.agenda.server.routes
+
+import com.daviddelgado.agenda.server.dto.ErrorResponse
+import com.daviddelgado.agenda.server.dto.UserResponse
+import com.daviddelgado.agenda.server.repository.UserRepository
+import com.daviddelgado.agenda.server.security.requireUserId
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.call
+import io.ktor.server.auth.authenticate
+import io.ktor.server.response.respond
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.delete
+import io.ktor.server.routing.get
+
+fun Route.userRoutes(userRepository: UserRepository) {
+    authenticate("auth-jwt") {
+        get("/users/me") {
+            val user = userRepository.findById(call.requireUserId())
+
+            if (user == null) {
+                call.respond(HttpStatusCode.NotFound, ErrorResponse("Usuario no encontrado"))
+                return@get
+            }
+            call.respond(UserResponse(user.id, user.name, user.email))
+        }
+
+        // Borrado conjunto: elimina la cuenta y, en cascada (ON DELETE CASCADE), todas sus tareas.
+        delete("/users/me") {
+            userRepository.delete(call.requireUserId())
+            call.respond(HttpStatusCode.NoContent)
+        }
+    }
+}

@@ -1,0 +1,30 @@
+build:
+  maxIssues: 0
+
+style:
+  MagicNumber:
+    active: false
+  ReturnCount:
+    active: false
+
+complexity:
+  LongMethod:
+    threshold: 60
+  # Un DAO de Room es por naturaleza una lista larga de consultas (leer, filtrar, borrados
+  # conjuntos, marcas de sincronizacion), y los repositorios implementan esa misma interfaz:
+  # el limite por defecto de 11 funciones no encaja con :core:database ni con :core:data.
+  TooManyFunctions:
+    thresholdInFiles: 20
+    thresholdInClasses: 20
+    thresholdInInterfaces: 20
+  LongParameterList:
+    functionThreshold: 7
+    constructorThreshold: 7
+
+naming:
+  FunctionNaming:
+    functionPattern: '[a-zA-Z][a-zA-Z0-9]*'
+  # Los ficheros expect/actual siguen la convencion Foo.android.kt / Foo.ios.kt de KMP,
+  # que esta regla no reconoce como "coincide con la declaracion".
+  MatchingDeclarationName:
+    active: false
