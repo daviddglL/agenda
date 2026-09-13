@@ -372,7 +372,9 @@ class TasksViewModelTest {
     fun seleccionarTodasYBorrarVaciaLaLista() =
         runTest(dispatcher) {
             val repository =
-                FakeTaskRepository(listOf(Task(id = "t-1", title = "Uno", date = hoy), Task(id = "t-2", title = "Dos", date = hoy)))
+                FakeTaskRepository(
+                    listOf(Task(id = "t-1", title = "Uno", date = hoy), Task(id = "t-2", title = "Dos", date = hoy)),
+                )
             val viewModel = viewModelCon(repository)
 
             viewModel.onIntent(TasksIntent.EnterSelectionMode("t-1"))

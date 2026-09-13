@@ -68,8 +68,12 @@ private fun LastDaysGrid(completedDates: Set<kotlinx.datetime.LocalDate>) {
         Row(modifier = Modifier.fillMaxWidth()) {
             week.forEach { date ->
                 androidx.compose.foundation.layout.Box(
+                    // Sin weight(1f) cada Box reclama todo el ancho de la Row (aspectRatio
+                    // por si solo no reparte el espacio entre hermanos) y los 7 dias de la
+                    // semana quedan apilados unos encima de otros en vez de en fila.
                     modifier =
                         Modifier
+                            .weight(1f)
                             .aspectRatio(1f)
                             .padding(3.dp)
                             .clip(RoundedCornerShape(6.dp))

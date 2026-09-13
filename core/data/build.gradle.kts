@@ -45,4 +45,9 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    // Expone BuildConfig.DEBUG para elegir servidor de desarrollo vs ProductionConfig
+    // (punto 4 de markdown.md) sin tocar codigo entre un build debug y uno release.
+    buildFeatures {
+        buildConfig = true
+    }
 }

@@ -23,6 +23,7 @@ private const val TASKS_WEBSOCKET_PATH = "tasks/ws"
 /** Endpoints de `/tasks` del modulo :server, incluido el borrado conjunto. */
 class TaskApi(private val client: HttpClient) {
     private val webSocketService = WebSocketService(client)
+
     suspend fun getAll(): List<TaskDto> = apiCall { client.get("tasks").body() }
 
     /**

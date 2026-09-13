@@ -2,9 +2,9 @@ package com.daviddelgado.agenda.server.realtime
 
 import io.ktor.websocket.Frame
 import io.ktor.websocket.WebSocketSession
-import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Comunicacion en tiempo real (punto 3 de markdown.md): cuando las tareas de un usuario

@@ -24,6 +24,16 @@
     public <init>(...);
 }
 
+# google-tink (dependencia transitiva de androidx.security.crypto, usada por SecureStorage
+# para EncryptedSharedPreferences) referencia anotaciones de error-prone que solo existen en
+# tiempo de compilacion; en tiempo de ejecucion no hacen falta y R8 no las encuentra.
+-dontwarn com.google.errorprone.annotations.**
+
+# slf4j (dependencia transitiva de ktor-client-logging): sin un binding real en el APK, R8
+# avisa de las clases del mecanismo de descubrimiento de implementacion; no afecta al
+# logging, que sigue funcionando con el binding "NOP" por defecto de slf4j.
+-dontwarn org.slf4j.impl.**
+
 # Uncomment this to preserve the line number information for
 # stack traces when debugging.
 #-keepattributes SourceFile,LineNumberTable

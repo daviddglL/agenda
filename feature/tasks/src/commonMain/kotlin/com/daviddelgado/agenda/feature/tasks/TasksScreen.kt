@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,6 +26,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -45,8 +48,6 @@ import com.daviddelgado.agenda.domain.model.ReminderFrequency
 import com.daviddelgado.agenda.domain.model.Task
 import com.daviddelgado.agenda.domain.model.TaskCategory
 import com.daviddelgado.agenda.domain.model.TaskPriority
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -78,57 +79,73 @@ fun TasksScreen(viewModel: TasksViewModel = koinViewModel()) {
             }
         },
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            if (!state.isSelectionMode) {
-                TasksHeader(
-                    isSyncing = state.isSyncing,
-                    onRefresh = { viewModel.onIntent(TasksIntent.Refresh) },
-                )
-            }
+        TasksList(state = state, onIntent = viewModel::onIntent, contentPadding = padding)
+    }
 
-            if (state.tasks.isEmpty()) {
-                Text(text = "No hay tareas para este dia", modifier = Modifier.padding(top = 24.dp))
-            } else {
-                LazyColumn {
-                    items(state.tasks, key = { it.id }) { task ->
-                        TaskRow(
-                            task = task,
-                            isSelectionMode = state.isSelectionMode,
-                            isSelected = task.id in state.selectedTaskIds,
-                            onToggle = { viewModel.onIntent(TasksIntent.ToggleCompleted(task.id)) },
-                            onDelete = { viewModel.onIntent(TasksIntent.RequestDelete(task)) },
-                            onClick = {
-                                if (state.isSelectionMode) {
-                                    viewModel.onIntent(TasksIntent.ToggleTaskSelection(task.id))
-                                } else {
-                                    viewModel.onIntent(TasksIntent.OpenEditTaskForm(task))
-                                }
-                            },
-                            onLongClick = { viewModel.onIntent(TasksIntent.EnterSelectionMode(task.id)) },
-                        )
-                    }
+    TasksDialogs(state = state, onIntent = viewModel::onIntent)
+}
+
+/** Cabecera + lista (o estado vacio) de tareas del dia seleccionado. */
+@Composable
+private fun TasksList(
+    state: TasksState,
+    onIntent: (TasksIntent) -> Unit,
+    contentPadding: PaddingValues,
+) {
+    Column(modifier = Modifier.fillMaxSize().padding(contentPadding).padding(16.dp)) {
+        if (!state.isSelectionMode) {
+            TasksHeader(isSyncing = state.isSyncing, onRefresh = { onIntent(TasksIntent.Refresh) })
+        }
+
+        if (state.tasks.isEmpty()) {
+            Text(text = "No hay tareas para este dia", modifier = Modifier.padding(top = 24.dp))
+        } else {
+            LazyColumn {
+                items(state.tasks, key = { it.id }) { task ->
+                    TaskRow(
+                        task = task,
+                        isSelectionMode = state.isSelectionMode,
+                        isSelected = task.id in state.selectedTaskIds,
+                        onToggle = { onIntent(TasksIntent.ToggleCompleted(task.id)) },
+                        onDelete = { onIntent(TasksIntent.RequestDelete(task)) },
+                        onClick = {
+                            if (state.isSelectionMode) {
+                                onIntent(TasksIntent.ToggleTaskSelection(task.id))
+                            } else {
+                                onIntent(TasksIntent.OpenEditTaskForm(task))
+                            }
+                        },
+                        onLongClick = { onIntent(TasksIntent.EnterSelectionMode(task.id)) },
+                    )
                 }
             }
         }
     }
+}
 
+/** Los tres dialogos de la pantalla (formulario, borrado simple, borrado conjunto). */
+@Composable
+private fun TasksDialogs(
+    state: TasksState,
+    onIntent: (TasksIntent) -> Unit,
+) {
     if (state.isFormVisible) {
-        TaskFormDialog(state = state, onIntent = viewModel::onIntent)
+        TaskFormDialog(state = state, onIntent = onIntent)
     }
 
     state.taskPendingDelete?.let { task ->
         DeleteTaskDialog(
             task = task,
-            onConfirm = { viewModel.onIntent(TasksIntent.ConfirmDelete) },
-            onCancel = { viewModel.onIntent(TasksIntent.CancelDelete) },
+            onConfirm = { onIntent(TasksIntent.ConfirmDelete) },
+            onCancel = { onIntent(TasksIntent.CancelDelete) },
         )
     }
 
     if (state.isBulkDeletePending) {
         BulkDeleteDialog(
             count = state.selectedCount,
-            onConfirm = { viewModel.onIntent(TasksIntent.ConfirmBulkDelete) },
-            onCancel = { viewModel.onIntent(TasksIntent.CancelBulkDelete) },
+            onConfirm = { onIntent(TasksIntent.ConfirmBulkDelete) },
+            onCancel = { onIntent(TasksIntent.CancelBulkDelete) },
         )
     }
 }
