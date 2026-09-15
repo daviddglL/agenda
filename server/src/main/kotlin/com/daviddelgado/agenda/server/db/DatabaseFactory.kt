@@ -17,7 +17,7 @@ object DatabaseFactory {
                 driver = "org.h2.Driver",
             )
         transaction(database) {
-            SchemaUtils.createMissingTablesAndColumns(Users, Tasks)
+            SchemaUtils.createMissingTablesAndColumns(Users, Tasks, FcmTokens)
         }
     }
 }

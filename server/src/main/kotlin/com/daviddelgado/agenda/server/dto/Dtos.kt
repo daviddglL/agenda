@@ -56,6 +56,10 @@ data class DeletedCountResponse(val deleted: Int)
 @Serializable
 data class ErrorResponse(val message: String)
 
+/** El token de dispositivo FCM que el cliente Android registra para recibir pushes. */
+@Serializable
+data class FcmTokenRequest(val token: String)
+
 private const val MAX_TITLE_LENGTH = 200
 private const val MAX_DESCRIPTION_LENGTH = 2000
 

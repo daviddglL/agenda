@@ -2,6 +2,7 @@ package com.daviddelgado.agenda.server
 
 import com.daviddelgado.agenda.server.db.DatabaseFactory
 import com.daviddelgado.agenda.server.dto.ErrorResponse
+import com.daviddelgado.agenda.server.repository.FcmTokenRepository
 import com.daviddelgado.agenda.server.repository.TaskRepository
 import com.daviddelgado.agenda.server.repository.UserRepository
 import com.daviddelgado.agenda.server.routes.authRoutes
@@ -57,6 +58,7 @@ fun Application.agendaModule(jdbcUrl: String = defaultJdbcUrl) {
         JwtConfig(secret = System.getenv("AGENDA_JWT_SECRET") ?: "dev-secret-change-me-in-production")
     val userRepository = UserRepository()
     val taskRepository = TaskRepository()
+    val fcmTokenRepository = FcmTokenRepository()
 
     install(ContentNegotiation) {
         json(
@@ -109,7 +111,7 @@ fun Application.agendaModule(jdbcUrl: String = defaultJdbcUrl) {
 
     routing {
         authRoutes(userRepository, jwtConfig)
-        userRoutes(userRepository)
+        userRoutes(userRepository, fcmTokenRepository)
         taskRoutes(taskRepository)
     }
 }

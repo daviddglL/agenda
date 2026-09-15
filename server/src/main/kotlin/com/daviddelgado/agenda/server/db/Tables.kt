@@ -45,3 +45,14 @@ object Tasks : Table("tasks") {
 
     override val primaryKey = PrimaryKey(id)
 }
+
+/** Un token de dispositivo FCM por el que se le puede mandar un push a este usuario. */
+object FcmTokens : Table("fcm_tokens") {
+    val userId =
+        varchar("user_id", 36)
+            .references(Users.id, onDelete = org.jetbrains.exposed.sql.ReferenceOption.CASCADE)
+    val token = varchar("token", 255)
+    val updatedAt = timestamp("updated_at")
+
+    override val primaryKey = PrimaryKey(userId, token)
+}
