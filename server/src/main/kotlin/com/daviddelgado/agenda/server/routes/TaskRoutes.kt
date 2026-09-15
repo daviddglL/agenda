@@ -9,6 +9,7 @@ import com.daviddelgado.agenda.server.realtime.TaskEventBroadcaster
 import com.daviddelgado.agenda.server.repository.TaskRepository
 import com.daviddelgado.agenda.server.security.requireUserId
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
 import io.ktor.server.auth.authenticate
 import io.ktor.server.request.receive
@@ -21,6 +22,7 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.util.getOrFail
 import io.ktor.server.websocket.webSocket
+import io.ktor.util.pipeline.PipelineContext
 import io.ktor.websocket.Frame
 
 fun Route.taskRoutes(taskRepository: TaskRepository) {
@@ -38,10 +40,7 @@ private fun Route.taskCrudRoutes(taskRepository: TaskRepository) {
     post("/tasks") {
         val userId = call.requireUserId()
         val dto = call.receive<TaskDto>()
-        dto.validationError()?.let { reason ->
-            call.respond(HttpStatusCode.BadRequest, ErrorResponse(reason))
-            return@post
-        }
+        if (respondIfInvalid(dto)) return@post
         call.respond(HttpStatusCode.Created, taskRepository.create(userId, dto))
         TaskEventBroadcaster.notifyTasksChanged(userId)
     }
@@ -50,10 +49,7 @@ private fun Route.taskCrudRoutes(taskRepository: TaskRepository) {
         val userId = call.requireUserId()
         val taskId = call.parameters.getOrFail("id")
         val dto = call.receive<TaskDto>()
-        dto.validationError()?.let { reason ->
-            call.respond(HttpStatusCode.BadRequest, ErrorResponse(reason))
-            return@put
-        }
+        if (respondIfInvalid(dto)) return@put
 
         if (!taskRepository.update(userId, taskId, dto)) {
             call.respond(HttpStatusCode.NotFound, ErrorResponse("Tarea no encontrada"))
@@ -103,6 +99,17 @@ private fun Route.taskCrudRoutes(taskRepository: TaskRepository) {
         call.respond(HttpStatusCode.OK, DeletedCountResponse(deleted))
         TaskEventBroadcaster.notifyTasksChanged(userId)
     }
+}
+
+/**
+ * Si `dto` no es valida, responde 400 con el motivo y devuelve true (el llamador debe
+ * cortar con `return@post`/`return@put` sin tocar el repositorio). Si es valida, no
+ * responde nada y devuelve false.
+ */
+private suspend fun PipelineContext<Unit, ApplicationCall>.respondIfInvalid(dto: TaskDto): Boolean {
+    val reason = dto.validationError() ?: return false
+    call.respond(HttpStatusCode.BadRequest, ErrorResponse(reason))
+    return true
 }
 
 /**
