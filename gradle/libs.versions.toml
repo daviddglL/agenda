@@ -30,6 +30,7 @@ h2 = "2.2.224"
 javaJwt = "4.4.0"
 jbcrypt = "0.4"
 logback = "1.5.6"
+napier = "2.7.1"
 
 [libraries]
 # Compose / lifecycle (multiplatform)
@@ -58,6 +59,7 @@ ktor-client-websockets = { group = "io.ktor", name = "ktor-client-websockets", v
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
+napier = { group = "io.github.aakira", name = "napier", version.ref = "napier" }
 
 # Persistencia local: Room KMP + SQLite Bundled driver (Offline-First)
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }

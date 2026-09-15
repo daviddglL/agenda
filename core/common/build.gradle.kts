@@ -15,6 +15,11 @@ kotlin {
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.koin.core)
+            implementation(libs.napier)
+        }
+
+        commonTest.dependencies {
+            implementation(kotlin("test"))
         }
     }
 }

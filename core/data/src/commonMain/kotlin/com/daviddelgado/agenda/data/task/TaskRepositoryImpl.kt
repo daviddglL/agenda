@@ -1,5 +1,6 @@
 package com.daviddelgado.agenda.data.task
 
+import com.daviddelgado.agenda.common.logging.AgendaLogger
 import com.daviddelgado.agenda.database.PendingDeletionDao
 import com.daviddelgado.agenda.database.PendingDeletionEntity
 import com.daviddelgado.agenda.database.TaskDao
@@ -41,6 +42,7 @@ class TaskRepositoryImpl(
         runCatching {
             if (isNew) api.create(task.toDto()) else api.update(task.toDto())
         }.onSuccess { dao.markSynced(task.id) }
+            .onFailure { AgendaLogger.w("TaskRepository", "No se pudo subir la tarea ${task.id}", it) }
     }
 
     override suspend fun deleteTask(id: String) = deleteWithTombstone(listOf(id)) { api.delete(id) }
@@ -64,7 +66,9 @@ class TaskRepositoryImpl(
         if (ids.isEmpty()) return
         dao.deleteByIds(ids)
         pendingDeletionDao.upsertAll(ids.map { PendingDeletionEntity(it) })
-        runCatching { remoteDelete() }.onSuccess { pendingDeletionDao.deleteByIds(ids) }
+        runCatching { remoteDelete() }
+            .onSuccess { pendingDeletionDao.deleteByIds(ids) }
+            .onFailure { AgendaLogger.w("TaskRepository", "Borrado remoto pendiente de reintentar: $ids", it) }
     }
 
     override suspend fun toggleCompleted(id: String) {
@@ -77,7 +81,7 @@ class TaskRepositoryImpl(
             pushPendingDeletions()
             pushPending()
             pullRemote()
-        }
+        }.onFailure { AgendaLogger.e("TaskRepository", "Fallo sincronizando tareas", it) }
 
     /** Reintenta los borrados que no se pudieron confirmar en el servidor la ultima vez. */
     private suspend fun pushPendingDeletions() {
