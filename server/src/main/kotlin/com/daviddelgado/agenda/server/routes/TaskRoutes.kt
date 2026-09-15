@@ -4,6 +4,7 @@ import com.daviddelgado.agenda.server.dto.BulkDeleteRequest
 import com.daviddelgado.agenda.server.dto.DeletedCountResponse
 import com.daviddelgado.agenda.server.dto.ErrorResponse
 import com.daviddelgado.agenda.server.dto.TaskDto
+import com.daviddelgado.agenda.server.dto.validationError
 import com.daviddelgado.agenda.server.realtime.TaskEventBroadcaster
 import com.daviddelgado.agenda.server.repository.TaskRepository
 import com.daviddelgado.agenda.server.security.requireUserId
@@ -37,6 +38,10 @@ private fun Route.taskCrudRoutes(taskRepository: TaskRepository) {
     post("/tasks") {
         val userId = call.requireUserId()
         val dto = call.receive<TaskDto>()
+        dto.validationError()?.let { reason ->
+            call.respond(HttpStatusCode.BadRequest, ErrorResponse(reason))
+            return@post
+        }
         call.respond(HttpStatusCode.Created, taskRepository.create(userId, dto))
         TaskEventBroadcaster.notifyTasksChanged(userId)
     }
@@ -45,6 +50,10 @@ private fun Route.taskCrudRoutes(taskRepository: TaskRepository) {
         val userId = call.requireUserId()
         val taskId = call.parameters.getOrFail("id")
         val dto = call.receive<TaskDto>()
+        dto.validationError()?.let { reason ->
+            call.respond(HttpStatusCode.BadRequest, ErrorResponse(reason))
+            return@put
+        }
 
         if (!taskRepository.update(userId, taskId, dto)) {
             call.respond(HttpStatusCode.NotFound, ErrorResponse("Tarea no encontrada"))

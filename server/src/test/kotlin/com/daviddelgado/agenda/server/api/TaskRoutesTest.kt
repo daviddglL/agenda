@@ -165,6 +165,51 @@ class TaskRoutesTest {
         }
 
     @Test
+    fun crearUnaTareaConTituloVacioResponde400() =
+        withApi { client ->
+            val token = client.registrarUsuario().accessToken
+
+            val response =
+                client.post("/tasks") {
+                    bearerAuth(token)
+                    contentType(ContentType.Application.Json)
+                    setBody(tareaDeEjemplo(id = "tarea-1", title = "   "))
+                }
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+        }
+
+    @Test
+    fun crearUnaTareaConTituloDemasiadoLargoResponde400() =
+        withApi { client ->
+            val token = client.registrarUsuario().accessToken
+
+            val response =
+                client.post("/tasks") {
+                    bearerAuth(token)
+                    contentType(ContentType.Application.Json)
+                    setBody(tareaDeEjemplo(id = "tarea-1", title = "a".repeat(201)))
+                }
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+        }
+
+    @Test
+    fun crearUnaTareaConFechaInvalidaResponde400() =
+        withApi { client ->
+            val token = client.registrarUsuario().accessToken
+
+            val response =
+                client.post("/tasks") {
+                    bearerAuth(token)
+                    contentType(ContentType.Application.Json)
+                    setBody(tareaDeEjemplo(id = "tarea-1").copy(date = "no-es-una-fecha"))
+                }
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+        }
+
+    @Test
     fun borrarLaCuentaBorraSusTareasEnCascadaYElLoginFalla() =
         withApi { client ->
             val session = client.registrarUsuario(email = "adios@test.com", password = "secreta123")

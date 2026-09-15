@@ -55,3 +55,18 @@ data class DeletedCountResponse(val deleted: Int)
 
 @Serializable
 data class ErrorResponse(val message: String)
+
+private const val MAX_TITLE_LENGTH = 200
+private const val MAX_DESCRIPTION_LENGTH = 2000
+
+/** Devuelve el motivo por el que la tarea no es valida, o null si lo es. */
+fun TaskDto.validationError(): String? {
+    if (title.isBlank()) return "El titulo no puede estar vacio"
+    if (title.length > MAX_TITLE_LENGTH) return "El titulo no puede superar $MAX_TITLE_LENGTH caracteres"
+    if (description.length > MAX_DESCRIPTION_LENGTH) {
+        return "La descripcion no puede superar $MAX_DESCRIPTION_LENGTH caracteres"
+    }
+    if (runCatching { java.time.LocalDate.parse(date) }.isFailure) return "Fecha invalida"
+    if (time != null && runCatching { java.time.LocalTime.parse(time) }.isFailure) return "Hora invalida"
+    return null
+}
