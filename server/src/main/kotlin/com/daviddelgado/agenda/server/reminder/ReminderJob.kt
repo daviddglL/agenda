@@ -51,9 +51,19 @@ fun checkAndSendReminders(
             )
         }
         .forEach { candidate ->
-            fcmTokenRepository.tokensForUser(candidate.userId).forEach { token ->
-                pushSender.send(token = token, title = candidate.title, body = "Recordatorio de tarea")
+            // Si no se entrega ningun push de verdad (sin tokens registrados todavia, o sin
+            // Firebase configurado y por tanto con NoOpPushSender, que siempre devuelve false),
+            // NO se marca como enviado: para UNA_VEZ/PERSONALIZADO eso dejaria el recordatorio
+            // marcado como entregado sin haberlo estado nunca, y como ReminderScheduler no vuelve
+            // a avisar tras el primer envio, la tarea no avisaria jamas (ver hallazgo de revision).
+            val entregado =
+                fcmTokenRepository.tokensForUser(candidate.userId)
+                    .map { token ->
+                        pushSender.send(token = token, title = candidate.title, body = "Recordatorio de tarea")
+                    }
+                    .any { it }
+            if (entregado) {
+                taskRepository.markReminderSent(candidate.taskId, now)
             }
-            taskRepository.markReminderSent(candidate.taskId, now)
         }
 }

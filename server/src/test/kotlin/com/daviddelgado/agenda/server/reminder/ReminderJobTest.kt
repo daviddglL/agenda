@@ -10,6 +10,7 @@ import kotlin.random.Random
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ReminderJobTest {
@@ -43,7 +44,8 @@ class ReminderJobTest {
 
     @Test
     fun noMandaNadaSiAunNoEsLaHora() {
-        crearUsuarioConTarea(reminderFrequency = "UNA_VEZ", date = "2026-09-20", time = "09:00")
+        val userId = crearUsuarioConTarea(reminderFrequency = "UNA_VEZ", date = "2026-09-20", time = "09:00")
+        fcmTokenRepository.upsert(userId, "token-1")
         var seLlamo = false
         val pushSender =
             PushSender { _, _, _ ->
@@ -59,6 +61,44 @@ class ReminderJobTest {
         )
 
         assertTrue(!seLlamo)
+        assertNull(taskRepository.tasksPendingReminderCheck().single().lastReminderSentAt)
+    }
+
+    @Test
+    fun noMarcaComoEnviadoSiNoHayNingunTokenRegistrado() {
+        crearUsuarioConTarea(reminderFrequency = "UNA_VEZ", date = "2026-09-20", time = "09:00")
+        var seLlamo = false
+        val pushSender =
+            PushSender { _, _, _ ->
+                seLlamo = true
+                true
+            }
+
+        checkAndSendReminders(
+            taskRepository,
+            fcmTokenRepository,
+            pushSender,
+            now = Instant.parse("2026-09-20T09:00:00Z"),
+        )
+
+        assertTrue(!seLlamo)
+        assertNull(taskRepository.tasksPendingReminderCheck().single().lastReminderSentAt)
+    }
+
+    @Test
+    fun noMarcaComoEnviadoSiElEnvioFallaParaTodosLosTokens() {
+        val userId = crearUsuarioConTarea(reminderFrequency = "UNA_VEZ", date = "2026-09-20", time = "09:00")
+        fcmTokenRepository.upsert(userId, "token-1")
+        val pushSender = PushSender { _, _, _ -> false }
+
+        checkAndSendReminders(
+            taskRepository,
+            fcmTokenRepository,
+            pushSender,
+            now = Instant.parse("2026-09-20T09:00:00Z"),
+        )
+
+        assertNull(taskRepository.tasksPendingReminderCheck().single().lastReminderSentAt)
     }
 
     private fun crearUsuarioConTarea(

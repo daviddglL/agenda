@@ -32,6 +32,7 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.routing
 import io.ktor.server.websocket.WebSockets
 import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -57,11 +58,15 @@ fun main() {
  * `agendaModule()` directamente via `testApplication` y nunca pasan por aqui, asi que el bucle
  * real nunca corre durante los tests. `GlobalScope` es deliberado (ver [DelicateCoroutinesApi]):
  * el bucle debe vivir mientras viva el proceso, igual que el propio servidor Netty.
+ * `Dispatchers.IO` (y no el `Default` que heredaria `GlobalScope` por defecto) porque el bucle
+ * hace trabajo bloqueante de verdad: transacciones JDBC (`transaction {}`) y, por cada token,
+ * una llamada HTTP sincrona a Firebase; `Default` esta pensado para trabajo de CPU, no para
+ * bloquear hilos con I/O.
  */
 @OptIn(DelicateCoroutinesApi::class)
 private fun startReminderLoop() {
     val pushSender = providePushSender(System.getenv("AGENDA_FIREBASE_SERVICE_ACCOUNT_JSON"))
-    GlobalScope.launch {
+    GlobalScope.launch(Dispatchers.IO) {
         runReminderLoop(TaskRepository(), FcmTokenRepository(), pushSender)
     }
 }
