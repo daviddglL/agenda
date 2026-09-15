@@ -21,11 +21,14 @@ import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.callloging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.cors.routing.CORS
+import io.ktor.server.plugins.ratelimit.RateLimit
+import io.ktor.server.plugins.ratelimit.RateLimitName
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.respond
 import io.ktor.server.routing.routing
 import io.ktor.server.websocket.WebSockets
 import kotlinx.serialization.json.Json
+import kotlin.time.Duration.Companion.seconds
 
 /** Cada cuanto se hace ping/timeout de los WebSockets de `/tasks/ws` (ver TaskEventBroadcaster). */
 private const val WEBSOCKET_PING_TIMEOUT_MILLIS = 15_000L
@@ -74,6 +77,12 @@ fun Application.agendaModule(jdbcUrl: String = defaultJdbcUrl) {
         anyHost()
         allowHeader("Content-Type")
         allowHeader("Authorization")
+    }
+
+    install(RateLimit) {
+        register(RateLimitName("auth")) {
+            rateLimiter(limit = 10, refillPeriod = 60.seconds)
+        }
     }
 
     install(StatusPages) {

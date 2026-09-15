@@ -90,6 +90,7 @@ ktor-server-authJwt = { group = "io.ktor", name = "ktor-server-auth-jwt", versio
 ktor-server-statusPages = { group = "io.ktor", name = "ktor-server-status-pages", version.ref = "ktor" }
 ktor-server-callLogging = { group = "io.ktor", name = "ktor-server-call-logging", version.ref = "ktor" }
 ktor-server-cors = { group = "io.ktor", name = "ktor-server-cors", version.ref = "ktor" }
+ktor-server-rateLimit = { group = "io.ktor", name = "ktor-server-rate-limit", version.ref = "ktor" }
 ktor-server-websockets = { group = "io.ktor", name = "ktor-server-websockets", version.ref = "ktor" }
 ktor-server-testHost = { group = "io.ktor", name = "ktor-server-test-host", version.ref = "ktor" }
 

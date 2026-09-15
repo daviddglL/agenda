@@ -143,4 +143,20 @@ class AuthRoutesTest {
 
             assertEquals(HttpStatusCode.BadRequest, response.status)
         }
+
+    @Test
+    fun trasVariosLoginsFallidosSeguidosElServidorResponde429() =
+        withApi { client ->
+            client.registrarUsuario(email = "limite@test.com", password = "secreta123")
+
+            val intentoQueDeberiaBloquear =
+                (1..15).map {
+                    client.post("/auth/login") {
+                        contentType(ContentType.Application.Json)
+                        setBody(LoginRequest(email = "limite@test.com", password = "incorrecta"))
+                    }
+                }.last()
+
+            assertEquals(HttpStatusCode.TooManyRequests, intentoQueDeberiaBloquear.status)
+        }
 }

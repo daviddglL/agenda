@@ -11,6 +11,8 @@ import com.daviddelgado.agenda.server.security.PasswordHasher
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
+import io.ktor.server.plugins.ratelimit.RateLimitName
+import io.ktor.server.plugins.ratelimit.rateLimit
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -22,71 +24,90 @@ fun Route.authRoutes(
     userRepository: UserRepository,
     jwtConfig: JwtConfig,
 ) {
-    post("/auth/register") {
-        val request = call.receive<RegisterRequest>()
-
-        if (call.respondIfInvalidRegisterRequest(request)) {
-            return@post
-        }
-
-        if (userRepository.findByEmail(request.email) != null) {
-            call.respond(HttpStatusCode.Conflict, ErrorResponse("Ya existe una cuenta con ese email"))
-            return@post
-        }
-
-        val user = userRepository.create(request.name, request.email, PasswordHasher.hash(request.password))
-        call.respond(
-            HttpStatusCode.Created,
-            AuthResponse(
-                userId = user.id,
-                name = user.name,
-                email = user.email,
-                accessToken = jwtConfig.generateAccessToken(user.id),
-                refreshToken = jwtConfig.generateRefreshToken(user.id),
-            ),
-        )
+    rateLimit(RateLimitName("auth")) {
+        post("/auth/register") { handleRegister(call, userRepository, jwtConfig) }
+        post("/auth/login") { handleLogin(call, userRepository, jwtConfig) }
     }
 
-    post("/auth/login") {
-        val request = call.receive<LoginRequest>()
-        val user = userRepository.findByEmail(request.email)
+    post("/auth/refresh") { handleRefresh(call, userRepository, jwtConfig) }
+}
 
-        if (user == null || !PasswordHasher.matches(request.password, user.passwordHash)) {
-            call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Email o contrasena incorrectos"))
-            return@post
-        }
+private suspend fun handleRegister(
+    call: ApplicationCall,
+    userRepository: UserRepository,
+    jwtConfig: JwtConfig,
+) {
+    val request = call.receive<RegisterRequest>()
 
-        call.respond(
-            AuthResponse(
-                userId = user.id,
-                name = user.name,
-                email = user.email,
-                accessToken = jwtConfig.generateAccessToken(user.id),
-                refreshToken = jwtConfig.generateRefreshToken(user.id),
-            ),
-        )
+    if (call.respondIfInvalidRegisterRequest(request)) {
+        return
     }
 
-    post("/auth/refresh") {
-        val request = call.receive<RefreshRequest>()
-        val userId = jwtConfig.verifyRefreshToken(request.refreshToken)
-        val user = userId?.let(userRepository::findById)
-
-        if (user == null) {
-            call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Refresh token invalido o caducado"))
-            return@post
-        }
-
-        call.respond(
-            AuthResponse(
-                userId = user.id,
-                name = user.name,
-                email = user.email,
-                accessToken = jwtConfig.generateAccessToken(user.id),
-                refreshToken = jwtConfig.generateRefreshToken(user.id),
-            ),
-        )
+    if (userRepository.findByEmail(request.email) != null) {
+        call.respond(HttpStatusCode.Conflict, ErrorResponse("Ya existe una cuenta con ese email"))
+        return
     }
+
+    val user = userRepository.create(request.name, request.email, PasswordHasher.hash(request.password))
+    call.respond(
+        HttpStatusCode.Created,
+        AuthResponse(
+            userId = user.id,
+            name = user.name,
+            email = user.email,
+            accessToken = jwtConfig.generateAccessToken(user.id),
+            refreshToken = jwtConfig.generateRefreshToken(user.id),
+        ),
+    )
+}
+
+private suspend fun handleLogin(
+    call: ApplicationCall,
+    userRepository: UserRepository,
+    jwtConfig: JwtConfig,
+) {
+    val request = call.receive<LoginRequest>()
+    val user = userRepository.findByEmail(request.email)
+
+    if (user == null || !PasswordHasher.matches(request.password, user.passwordHash)) {
+        call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Email o contrasena incorrectos"))
+        return
+    }
+
+    call.respond(
+        AuthResponse(
+            userId = user.id,
+            name = user.name,
+            email = user.email,
+            accessToken = jwtConfig.generateAccessToken(user.id),
+            refreshToken = jwtConfig.generateRefreshToken(user.id),
+        ),
+    )
+}
+
+private suspend fun handleRefresh(
+    call: ApplicationCall,
+    userRepository: UserRepository,
+    jwtConfig: JwtConfig,
+) {
+    val request = call.receive<RefreshRequest>()
+    val userId = jwtConfig.verifyRefreshToken(request.refreshToken)
+    val user = userId?.let(userRepository::findById)
+
+    if (user == null) {
+        call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Refresh token invalido o caducado"))
+        return
+    }
+
+    call.respond(
+        AuthResponse(
+            userId = user.id,
+            name = user.name,
+            email = user.email,
+            accessToken = jwtConfig.generateAccessToken(user.id),
+            refreshToken = jwtConfig.generateRefreshToken(user.id),
+        ),
+    )
 }
 
 private suspend fun ApplicationCall.respondIfInvalidRegisterRequest(request: RegisterRequest): Boolean {
