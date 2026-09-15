@@ -21,6 +21,7 @@ import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.callloging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.cors.routing.CORS
+import io.ktor.server.plugins.origin
 import io.ktor.server.plugins.ratelimit.RateLimit
 import io.ktor.server.plugins.ratelimit.RateLimitName
 import io.ktor.server.plugins.statuspages.StatusPages
@@ -80,8 +81,11 @@ fun Application.agendaModule(jdbcUrl: String = defaultJdbcUrl) {
     }
 
     install(RateLimit) {
+        // Sin esta clave el limite seria un unico cubo global para todo el proceso: un solo
+        // cliente agotaria las 10 peticiones y bloquearia a el resto de usuarios durante 60s.
         register(RateLimitName("auth")) {
             rateLimiter(limit = 10, refillPeriod = 60.seconds)
+            requestKey { call -> call.request.origin.remoteHost }
         }
     }
 
