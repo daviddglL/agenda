@@ -3,6 +3,7 @@ package com.daviddelgado.agenda.feature.calendar
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.daviddelgado.agenda.domain.model.Task
@@ -91,5 +92,13 @@ class CalendarScreenTest {
         composeRule.setContent { CalendarScreen(onOpenDay = {}, viewModel = viewModelCon(tasks)) }
 
         composeRule.onNodeWithText("(2)").assertIsDisplayed()
+    }
+
+    @Test
+    fun losBotonesDeNavegacionDelMesTienenDescripcionAccesible() {
+        composeRule.setContent { CalendarScreen(onOpenDay = {}, viewModel = viewModelCon()) }
+
+        composeRule.onNodeWithContentDescription("Mes anterior").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Mes siguiente").assertIsDisplayed()
     }
 }

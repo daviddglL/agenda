@@ -12,6 +12,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -54,12 +58,16 @@ fun CalendarScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                IconButton(onClick = { viewModel.onIntent(CalendarIntent.PreviousMonth) }) { Text("<") }
+                IconButton(onClick = { viewModel.onIntent(CalendarIntent.PreviousMonth) }) {
+                    Icon(Icons.Filled.ArrowBack, contentDescription = "Mes anterior")
+                }
                 Text(
                     text = "${state.visibleMonth.month.name} ${state.visibleMonth.year}",
                     style = MaterialTheme.typography.titleLarge,
                 )
-                IconButton(onClick = { viewModel.onIntent(CalendarIntent.NextMonth) }) { Text(">") }
+                IconButton(onClick = { viewModel.onIntent(CalendarIntent.NextMonth) }) {
+                    Icon(Icons.Filled.ArrowForward, contentDescription = "Mes siguiente")
+                }
             }
 
             MonthGrid(
