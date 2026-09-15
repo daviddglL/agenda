@@ -9,11 +9,14 @@ import com.daviddelgado.agenda.server.repository.UserRepository
 import com.daviddelgado.agenda.server.security.JwtConfig
 import com.daviddelgado.agenda.server.security.PasswordHasher
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
+
+private val emailRegex = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
 
 fun Route.authRoutes(
     userRepository: UserRepository,
@@ -22,10 +25,10 @@ fun Route.authRoutes(
     post("/auth/register") {
         val request = call.receive<RegisterRequest>()
 
-        if (request.name.isBlank() || request.email.isBlank() || request.password.length < 6) {
-            call.respond(HttpStatusCode.BadRequest, ErrorResponse("Datos invalidos: contrasena minima 6 caracteres"))
+        if (call.respondIfInvalidRegisterRequest(request)) {
             return@post
         }
+
         if (userRepository.findByEmail(request.email) != null) {
             call.respond(HttpStatusCode.Conflict, ErrorResponse("Ya existe una cuenta con ese email"))
             return@post
@@ -84,4 +87,13 @@ fun Route.authRoutes(
             ),
         )
     }
+}
+
+private suspend fun ApplicationCall.respondIfInvalidRegisterRequest(request: RegisterRequest): Boolean {
+    val emailValido = emailRegex.matches(request.email)
+    val isInvalid = request.name.isBlank() || !emailValido || request.password.length < 6
+    if (isInvalid) {
+        respond(HttpStatusCode.BadRequest, ErrorResponse("Datos invalidos: email y contrasena minima 6"))
+    }
+    return isInvalid
 }

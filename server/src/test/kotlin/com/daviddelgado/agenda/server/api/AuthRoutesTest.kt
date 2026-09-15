@@ -131,4 +131,16 @@ class AuthRoutesTest {
 
             assertNotEquals(primero.userId, segundo.userId)
         }
+
+    @Test
+    fun registrarseConEmailSinArrobaResponde400() =
+        withApi { client ->
+            val response =
+                client.post("/auth/register") {
+                    contentType(ContentType.Application.Json)
+                    setBody(RegisterRequest(name = "David", email = "no-es-un-email", password = "secreta123"))
+                }
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+        }
 }
