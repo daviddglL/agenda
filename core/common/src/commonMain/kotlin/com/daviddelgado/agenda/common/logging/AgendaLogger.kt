@@ -13,46 +13,24 @@ object AgendaLogger {
 
     fun start() {
         if (started) return
-        try {
-            Napier.base(DebugAntilog())
-        } catch (e: Exception) {
-            // Fallback en unit tests donde DebugAntilog falla
-        }
+        Napier.base(DebugAntilog())
         started = true
     }
 
     fun d(
         tag: String,
         message: String,
-    ) {
-        try {
-            Napier.d(message, tag = tag)
-        } catch (e: Exception) {
-            // Ignora excepciones en logging (p.ej. en tests JVM)
-        }
-    }
+    ) = Napier.d(message, tag = tag)
 
     fun w(
         tag: String,
         message: String,
         throwable: Throwable? = null,
-    ) {
-        try {
-            Napier.w(message, throwable, tag)
-        } catch (e: Exception) {
-            // Ignora excepciones en logging (p.ej. en tests JVM)
-        }
-    }
+    ) = Napier.w(message, throwable, tag)
 
     fun e(
         tag: String,
         message: String,
         throwable: Throwable? = null,
-    ) {
-        try {
-            Napier.e(message, throwable, tag)
-        } catch (e: Exception) {
-            // Ignora excepciones en logging (p.ej. en tests JVM)
-        }
-    }
+    ) = Napier.e(message, throwable, tag)
 }
