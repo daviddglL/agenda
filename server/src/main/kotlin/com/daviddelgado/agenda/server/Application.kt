@@ -2,6 +2,8 @@ package com.daviddelgado.agenda.server
 
 import com.daviddelgado.agenda.server.db.DatabaseFactory
 import com.daviddelgado.agenda.server.dto.ErrorResponse
+import com.daviddelgado.agenda.server.push.providePushSender
+import com.daviddelgado.agenda.server.reminder.runReminderLoop
 import com.daviddelgado.agenda.server.repository.FcmTokenRepository
 import com.daviddelgado.agenda.server.repository.TaskRepository
 import com.daviddelgado.agenda.server.repository.UserRepository
@@ -29,6 +31,9 @@ import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.respond
 import io.ktor.server.routing.routing
 import io.ktor.server.websocket.WebSockets
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlin.time.Duration.Companion.seconds
 
@@ -42,7 +47,23 @@ private val defaultJdbcUrl: String
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
     embeddedServer(Netty, port = port, host = "0.0.0.0", module = { agendaModule() })
-        .start(wait = true)
+        .start(wait = false)
+    startReminderLoop()
+    Thread.currentThread().join()
+}
+
+/**
+ * Arranca [runReminderLoop] en segundo plano. Solo se llama desde `main()`: los tests usan
+ * `agendaModule()` directamente via `testApplication` y nunca pasan por aqui, asi que el bucle
+ * real nunca corre durante los tests. `GlobalScope` es deliberado (ver [DelicateCoroutinesApi]):
+ * el bucle debe vivir mientras viva el proceso, igual que el propio servidor Netty.
+ */
+@OptIn(DelicateCoroutinesApi::class)
+private fun startReminderLoop() {
+    val pushSender = providePushSender(System.getenv("AGENDA_FIREBASE_SERVICE_ACCOUNT_JSON"))
+    GlobalScope.launch {
+        runReminderLoop(TaskRepository(), FcmTokenRepository(), pushSender)
+    }
 }
 
 /**

@@ -5,6 +5,7 @@ import com.daviddelgado.agenda.server.dto.TaskDto
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.neq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
@@ -15,6 +16,18 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.UUID
+
+/** Lo minimo que necesita [com.daviddelgado.agenda.server.reminder.ReminderJob] de una tarea. */
+data class ReminderCandidate(
+    val taskId: String,
+    val userId: String,
+    val title: String,
+    val date: LocalDate,
+    val time: LocalTime?,
+    val reminderFrequency: String,
+    val isCompleted: Boolean,
+    val lastReminderSentAt: Instant?,
+)
 
 class TaskRepository {
     /**
@@ -127,6 +140,34 @@ class TaskRepository {
         transaction {
             Tasks.deleteWhere { Tasks.userId eq userId }
         }
+
+    /** Tareas no completadas con un recordatorio configurado; [ReminderScheduler] decide cuales tocan ya. */
+    fun tasksPendingReminderCheck(): List<ReminderCandidate> =
+        transaction {
+            Tasks.selectAll()
+                .where { (Tasks.isCompleted eq false) and (Tasks.reminderFrequency neq "NINGUNO") }
+                .map {
+                    ReminderCandidate(
+                        taskId = it[Tasks.id],
+                        userId = it[Tasks.userId],
+                        title = it[Tasks.title],
+                        date = it[Tasks.date],
+                        time = it[Tasks.time],
+                        reminderFrequency = it[Tasks.reminderFrequency],
+                        isCompleted = it[Tasks.isCompleted],
+                        lastReminderSentAt = it[Tasks.lastReminderSentAt],
+                    )
+                }
+        }
+
+    fun markReminderSent(
+        taskId: String,
+        at: Instant,
+    ) {
+        transaction {
+            Tasks.update({ Tasks.id eq taskId }) { it[lastReminderSentAt] = at }
+        }
+    }
 
     private fun ResultRow.toDto() =
         TaskDto(

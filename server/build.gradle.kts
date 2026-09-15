@@ -36,6 +36,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.logback.classic)
+    implementation(libs.firebase.admin)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.junit)

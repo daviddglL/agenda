@@ -31,6 +31,7 @@ javaJwt = "4.4.0"
 jbcrypt = "0.4"
 logback = "1.5.6"
 napier = "2.7.1"
+firebaseAdmin = "9.4.1"
 
 [libraries]
 # Compose / lifecycle (multiplatform)
@@ -103,6 +104,7 @@ h2database = { group = "com.h2database", name = "h2", version.ref = "h2" }
 java-jwt = { group = "com.auth0", name = "java-jwt", version.ref = "javaJwt" }
 jbcrypt = { group = "org.mindrot", name = "jbcrypt", version.ref = "jbcrypt" }
 logback-classic = { group = "ch.qos.logback", name = "logback-classic", version.ref = "logback" }
+firebase-admin = { group = "com.google.firebase", name = "firebase-admin", version.ref = "firebaseAdmin" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

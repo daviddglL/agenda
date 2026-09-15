@@ -42,6 +42,7 @@ object Tasks : Table("tasks") {
     val isCompleted = bool("is_completed").default(false)
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")
+    val lastReminderSentAt = timestamp("last_reminder_sent_at").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }
