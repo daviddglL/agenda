@@ -1,9 +1,11 @@
 package com.daviddelgado.agenda.feature.tasks
 
+import com.daviddelgado.agenda.domain.model.IncrementUnit
 import com.daviddelgado.agenda.domain.model.Task
 import com.daviddelgado.agenda.domain.usecase.DeleteAllTasksUseCase
 import com.daviddelgado.agenda.domain.usecase.DeleteTaskUseCase
 import com.daviddelgado.agenda.domain.usecase.DeleteTasksUseCase
+import com.daviddelgado.agenda.domain.usecase.GenerateTaskRepetitionsUseCase
 import com.daviddelgado.agenda.domain.usecase.ObserveTaskChangesUseCase
 import com.daviddelgado.agenda.domain.usecase.ObserveTasksUseCase
 import com.daviddelgado.agenda.domain.usecase.SyncTasksUseCase
@@ -56,6 +58,7 @@ class TasksViewModelTest {
             toggleTaskCompletionUseCase = ToggleTaskCompletionUseCase(repository),
             syncTasksUseCase = SyncTasksUseCase(repository),
             observeTaskChangesUseCase = ObserveTaskChangesUseCase(repository),
+            generateTaskRepetitionsUseCase = GenerateTaskRepetitionsUseCase(),
         )
 
     @Test
@@ -303,16 +306,73 @@ class TasksViewModelTest {
             viewModel.onIntent(TasksIntent.FormIncrementToggled(true))
             viewModel.onIntent(TasksIntent.FormIncrementAmountChanged("5"))
             viewModel.onIntent(TasksIntent.FormIncrementEveryValueChanged("2"))
-            viewModel.onIntent(
-                TasksIntent.FormIncrementEveryUnitChanged(com.daviddelgado.agenda.domain.model.IncrementUnit.SEMANAS),
-            )
+            viewModel.onIntent(TasksIntent.FormIncrementEveryUnitChanged(IncrementUnit.SEMANAS))
             viewModel.onIntent(TasksIntent.SaveTask)
 
-            val guardada = repository.tasks.value.single()
+            val guardada = repository.tasks.value.first { it.date == hoy }
             assertEquals(kotlinx.datetime.LocalTime(7, 30), guardada.time)
             assertTrue(guardada.isIncremental)
             assertEquals(5, guardada.increment?.amount)
             assertEquals(2, guardada.increment?.everyValue)
+        }
+
+    @Test
+    fun guardarUnaTareaIncrementalNuevaCreaLasCopiasConLasFechasYCamposCorrectos() =
+        runTest(dispatcher) {
+            val repository = FakeTaskRepository()
+            val viewModel = viewModelCon(repository)
+
+            viewModel.onIntent(TasksIntent.OpenNewTaskForm)
+            viewModel.onIntent(TasksIntent.FormTitleChanged("Flexiones"))
+            viewModel.onIntent(TasksIntent.FormTimeChanged("07:30"))
+            viewModel.onIntent(TasksIntent.FormIncrementToggled(true))
+            viewModel.onIntent(TasksIntent.FormIncrementAmountChanged("3"))
+            viewModel.onIntent(TasksIntent.FormIncrementEveryValueChanged("2"))
+            viewModel.onIntent(TasksIntent.FormIncrementEveryUnitChanged(IncrementUnit.SEMANAS))
+            viewModel.onIntent(TasksIntent.SaveTask)
+
+            // La original + 3 copias = 4 tareas en total.
+            assertEquals(4, repository.tasks.value.size)
+            val copias = repository.tasks.value.filterNot { it.date == hoy }.sortedBy { it.date }
+            assertEquals(
+                listOf(hoy.plus(14, DateTimeUnit.DAY), hoy.plus(28, DateTimeUnit.DAY), hoy.plus(42, DateTimeUnit.DAY)),
+                copias.map { it.date },
+            )
+            copias.forEach { copia ->
+                assertEquals("Flexiones", copia.title)
+                assertEquals(kotlinx.datetime.LocalTime(7, 30), copia.time)
+                assertFalse(copia.isCompleted)
+                assertNull(copia.increment)
+                assertTrue(copia.id.isNotBlank())
+            }
+            // Cada copia tiene su propio id, distinto de la original y entre ellas.
+            assertEquals(repository.tasks.value.size, repository.tasks.value.map { it.id }.toSet().size)
+        }
+
+    @Test
+    fun editarUnaTareaIncrementalAlGuardarNoVuelveAGenerarCopias() =
+        runTest(dispatcher) {
+            val tarea =
+                Task(
+                    id = "t-1",
+                    title = "Flexiones",
+                    date = hoy,
+                    increment =
+                        com.daviddelgado.agenda.domain.model.IncrementConfig(
+                            amount = 3,
+                            everyValue = 1,
+                            everyUnit = IncrementUnit.SEMANAS,
+                        ),
+                )
+            val repository = FakeTaskRepository(listOf(tarea))
+            val viewModel = viewModelCon(repository)
+
+            viewModel.onIntent(TasksIntent.OpenEditTaskForm(tarea))
+            viewModel.onIntent(TasksIntent.FormTitleChanged("Flexiones diarias"))
+            viewModel.onIntent(TasksIntent.SaveTask)
+
+            assertEquals(1, repository.tasks.value.size)
+            assertEquals("Flexiones diarias", repository.tasks.value.single().title)
         }
 
     @Test

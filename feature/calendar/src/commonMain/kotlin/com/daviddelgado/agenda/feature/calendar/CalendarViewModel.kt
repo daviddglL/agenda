@@ -20,7 +20,9 @@ class CalendarViewModel(observeTasksUseCase: ObserveTasksUseCase) :
     ) {
     init {
         observeTasksUseCase(null)
-            .onEach { tasks -> setState { copy(datesWithTasks = tasks.map { it.date }.toSet()) } }
+            .onEach { tasks ->
+                setState { copy(taskCountsByDate = tasks.groupingBy { it.date }.eachCount()) }
+            }
             .launchIn(viewModelScope)
     }
 

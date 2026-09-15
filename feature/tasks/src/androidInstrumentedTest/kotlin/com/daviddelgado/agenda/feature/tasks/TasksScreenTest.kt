@@ -1,9 +1,13 @@
 package com.daviddelgado.agenda.feature.tasks
 
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -12,6 +16,7 @@ import com.daviddelgado.agenda.domain.repository.TaskRepository
 import com.daviddelgado.agenda.domain.usecase.DeleteAllTasksUseCase
 import com.daviddelgado.agenda.domain.usecase.DeleteTaskUseCase
 import com.daviddelgado.agenda.domain.usecase.DeleteTasksUseCase
+import com.daviddelgado.agenda.domain.usecase.GenerateTaskRepetitionsUseCase
 import com.daviddelgado.agenda.domain.usecase.ObserveTaskChangesUseCase
 import com.daviddelgado.agenda.domain.usecase.ObserveTasksUseCase
 import com.daviddelgado.agenda.domain.usecase.SyncTasksUseCase
@@ -22,9 +27,12 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -86,6 +94,7 @@ class TasksScreenTest {
             toggleTaskCompletionUseCase = ToggleTaskCompletionUseCase(repository),
             syncTasksUseCase = SyncTasksUseCase(repository),
             observeTaskChangesUseCase = ObserveTaskChangesUseCase(repository),
+            generateTaskRepetitionsUseCase = GenerateTaskRepetitionsUseCase(),
         )
 
     @Test
@@ -134,5 +143,48 @@ class TasksScreenTest {
 
         composeRule.onNodeWithText("El titulo no puede estar vacio").assertIsDisplayed()
         composeRule.onNodeWithText("Nueva tarea").assertIsDisplayed()
+    }
+
+    @Test
+    fun alAbrirConUnaFechaInicialMuestraLasTareasDeEseDiaYAvisaDeConsumirla() {
+        val otroDia = hoy.plus(3, DateTimeUnit.DAY)
+        val repository =
+            FakeTaskRepository(
+                listOf(
+                    Task(id = "t-1", title = "Comprar pan", date = hoy),
+                    Task(id = "t-2", title = "Cita medico", date = otroDia),
+                ),
+            )
+        var fechaConsumida = false
+
+        composeRule.setContent {
+            TasksScreen(
+                initialDate = otroDia,
+                onDateConsumed = { fechaConsumida = true },
+                viewModel = viewModelCon(repository),
+            )
+        }
+
+        composeRule.onNodeWithText("Cita medico").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Comprar pan").assertCountEquals(0)
+        composeRule.runOnIdle { assertTrue(fechaConsumida) }
+    }
+
+    @Test
+    fun activarIncrementalHaceQueElFormularioSeaDeslizable() {
+        composeRule.setContent { TasksScreen(viewModel = viewModelCon(FakeTaskRepository())) }
+
+        composeRule.onNodeWithContentDescription("Nueva tarea").performClick()
+        // Antes del fix el formulario no tenia ningun contenedor deslizable: al activar el
+        // interruptor, los campos de incremento (cantidad, cada cuanto, unidad) se salian del
+        // alto fijo del dialogo y el recorte se veia como una caja superpuesta con la
+        // anterior en vez de poder deslizarse hasta ellos (verificado a mano en el emulador).
+        composeRule.onNodeWithContentDescription("Tarea incremental").performClick()
+
+        val nodo = composeRule.onNodeWithTag("taskFormScroll").fetchSemanticsNode()
+        assertTrue(
+            "el formulario deberia tener un contenedor con accion de scroll",
+            nodo.config.contains(SemanticsActions.ScrollBy),
+        )
     }
 }

@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -39,6 +41,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.daviddelgado.agenda.designsystem.component.AgendaDropdownField
 import com.daviddelgado.agenda.designsystem.component.AgendaPrimaryButton
@@ -48,12 +53,29 @@ import com.daviddelgado.agenda.domain.model.ReminderFrequency
 import com.daviddelgado.agenda.domain.model.Task
 import com.daviddelgado.agenda.domain.model.TaskCategory
 import com.daviddelgado.agenda.domain.model.TaskPriority
+import kotlinx.datetime.LocalDate
 import org.koin.compose.viewmodel.koinViewModel
 
+/**
+ * @param initialDate si no es null, se selecciona al entrar (atajo desde el calendario para
+ * abrir el dia de una tarea concreta, ver [TasksIntent.SelectDate]); se llama a [onDateConsumed]
+ * justo despues para que quien navega no vuelva a forzarla en la siguiente recomposicion.
+ */
 @Composable
-fun TasksScreen(viewModel: TasksViewModel = koinViewModel()) {
+fun TasksScreen(
+    initialDate: LocalDate? = null,
+    onDateConsumed: () -> Unit = {},
+    viewModel: TasksViewModel = koinViewModel(),
+) {
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(initialDate) {
+        if (initialDate != null) {
+            viewModel.onIntent(TasksIntent.SelectDate(initialDate))
+            onDateConsumed()
+        }
+    }
 
     // Los errores de sincronizacion con el servidor son efectos de un solo uso (MVI).
     LaunchedEffect(Unit) {
@@ -246,58 +268,80 @@ private fun TaskFormDialog(
     AlertDialog(
         onDismissRequest = { onIntent(TasksIntent.DismissForm) },
         title = { Text(if (state.editingTaskId == null) "Nueva tarea" else "Editar tarea") },
-        text = {
-            Column {
-                AgendaTextField(state.formTitle, { onIntent(TasksIntent.FormTitleChanged(it)) }, "Titulo")
-                AgendaTextField(
-                    state.formDescription,
-                    { onIntent(TasksIntent.FormDescriptionChanged(it)) },
-                    "Descripcion",
-                )
-                AgendaDropdownField(
-                    label = "Categoria",
-                    options = TaskCategory.entries,
-                    selected = state.formCategory,
-                    optionLabel = { it.name },
-                    onSelected = { onIntent(TasksIntent.FormCategoryChanged(it)) },
-                )
-                AgendaDropdownField(
-                    label = "Prioridad",
-                    options = TaskPriority.entries,
-                    selected = state.formPriority,
-                    optionLabel = { it.name },
-                    onSelected = { onIntent(TasksIntent.FormPriorityChanged(it)) },
-                )
-                AgendaDropdownField(
-                    label = "Recordatorio",
-                    options = ReminderFrequency.entries,
-                    selected = state.formReminderFrequency,
-                    optionLabel = { it.name },
-                    onSelected = { onIntent(TasksIntent.FormReminderChanged(it)) },
-                )
-                AgendaTextField(
-                    value = state.formTime,
-                    onValueChange = { onIntent(TasksIntent.FormTimeChanged(it)) },
-                    label = "Hora (HH:mm, opcional)",
-                )
-                AgendaTextField(
-                    value = state.formDurationMinutes,
-                    onValueChange = { onIntent(TasksIntent.FormDurationChanged(it)) },
-                    label = "Duracion en minutos (opcional)",
-                    isNumeric = true,
-                )
-                IncrementSection(state = state, onIntent = onIntent)
-                state.formError?.let {
-                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        },
+        text = { TaskFormFields(state = state, onIntent = onIntent) },
         confirmButton = { AgendaPrimaryButton(text = "Guardar", onClick = { onIntent(TasksIntent.SaveTask) }) },
         dismissButton = { TextButton(onClick = { onIntent(TasksIntent.DismissForm) }) { Text("Cancelar") } },
     )
 }
 
-/** Interruptor "es incremental" + sus campos (cantidad, cada cuanto, unidad) si esta activo. */
+/**
+ * Campos del formulario, en un contenedor deslizable: sin scroll, un formulario largo (campos
+ * de incremento incluidos) se corta en el borde del dialogo y el trozo cortado se ve
+ * superpuesto con el campo anterior en vez de deslizarse.
+ */
+@Composable
+private fun TaskFormFields(
+    state: TasksState,
+    onIntent: (TasksIntent) -> Unit,
+) {
+    // Sin heightIn: el propio AlertDialog ya impone un alto maximo real (es lo que antes
+    // causaba el recorte); dejamos que sea ese limite natural el que decida cuando hace
+    // falta deslizar, en vez de fijar un numero de dp a mano.
+    Column(
+        modifier =
+            Modifier
+                .testTag("taskFormScroll")
+                .verticalScroll(rememberScrollState()),
+    ) {
+        AgendaTextField(state.formTitle, { onIntent(TasksIntent.FormTitleChanged(it)) }, "Titulo")
+        AgendaTextField(
+            state.formDescription,
+            { onIntent(TasksIntent.FormDescriptionChanged(it)) },
+            "Descripcion",
+        )
+        AgendaDropdownField(
+            label = "Categoria",
+            options = TaskCategory.entries,
+            selected = state.formCategory,
+            optionLabel = { it.name },
+            onSelected = { onIntent(TasksIntent.FormCategoryChanged(it)) },
+        )
+        AgendaDropdownField(
+            label = "Prioridad",
+            options = TaskPriority.entries,
+            selected = state.formPriority,
+            optionLabel = { it.name },
+            onSelected = { onIntent(TasksIntent.FormPriorityChanged(it)) },
+        )
+        AgendaDropdownField(
+            label = "Recordatorio",
+            options = ReminderFrequency.entries,
+            selected = state.formReminderFrequency,
+            optionLabel = { it.name },
+            onSelected = { onIntent(TasksIntent.FormReminderChanged(it)) },
+        )
+        AgendaTextField(
+            value = state.formTime,
+            onValueChange = { onIntent(TasksIntent.FormTimeChanged(it)) },
+            label = "Hora (HH:mm, opcional)",
+        )
+        AgendaTextField(
+            value = state.formDurationMinutes,
+            onValueChange = { onIntent(TasksIntent.FormDurationChanged(it)) },
+            label = "Duracion en minutos (opcional)",
+            isNumeric = true,
+        )
+        IncrementSection(state = state, onIntent = onIntent)
+        state.formError?.let {
+            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+/**
+ * Interruptor "es incremental": al crear la tarea (no al editar) se generan copias
+ * adicionales repitiendo sus caracteristicas basicas, ver `GenerateTaskRepetitionsUseCase`.
+ */
 @Composable
 private fun IncrementSection(
     state: TasksState,
@@ -312,13 +356,14 @@ private fun IncrementSection(
         Switch(
             checked = state.formIsIncremental,
             onCheckedChange = { onIntent(TasksIntent.FormIncrementToggled(it)) },
+            modifier = Modifier.semantics { contentDescription = "Tarea incremental" },
         )
     }
     if (state.formIsIncremental) {
         AgendaTextField(
             value = state.formIncrementAmount,
             onValueChange = { onIntent(TasksIntent.FormIncrementAmountChanged(it)) },
-            label = "Cuanto se incrementa",
+            label = "Numero de repeticiones",
             isNumeric = true,
         )
         AgendaTextField(

@@ -22,13 +22,14 @@ complexity:
   # contrasena, numerico, texto de ayuda y error son 8 opciones razonables para un unico
   # componente compartido, no una señal de diseño confuso (el compilador de Compose añade
   # un parametro implicito mas a las funciones @Composable, de ahi el 9 y no el 8).
-  # TasksViewModel recibe 8 casos de uso independientes (uno por accion: observar, guardar,
-  # borrar uno, borrar varios, borrar todo, alternar completada, sincronizar, tiempo real);
-  # es la consecuencia natural de casos de uso granulares (un caso de uso = una accion), no
-  # una senal de que el ViewModel tenga demasiadas responsabilidades.
+  # TasksViewModel recibe 9 casos de uso independientes (uno por accion: observar, guardar,
+  # borrar uno, borrar varios, borrar todo, alternar completada, sincronizar, tiempo real,
+  # generar copias de una tarea incremental); es la consecuencia natural de casos de uso
+  # granulares (un caso de uso = una accion), no una senal de que el ViewModel tenga
+  # demasiadas responsabilidades.
   LongParameterList:
     functionThreshold: 9
-    constructorThreshold: 9
+    constructorThreshold: 10
 
 naming:
   FunctionNaming:

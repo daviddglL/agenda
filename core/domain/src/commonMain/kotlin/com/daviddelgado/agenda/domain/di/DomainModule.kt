@@ -4,6 +4,7 @@ import com.daviddelgado.agenda.domain.usecase.DeleteAccountUseCase
 import com.daviddelgado.agenda.domain.usecase.DeleteAllTasksUseCase
 import com.daviddelgado.agenda.domain.usecase.DeleteTaskUseCase
 import com.daviddelgado.agenda.domain.usecase.DeleteTasksUseCase
+import com.daviddelgado.agenda.domain.usecase.GenerateTaskRepetitionsUseCase
 import com.daviddelgado.agenda.domain.usecase.LoginUseCase
 import com.daviddelgado.agenda.domain.usecase.LogoutUseCase
 import com.daviddelgado.agenda.domain.usecase.ObserveCurrentUserUseCase
@@ -21,6 +22,7 @@ val domainModule =
     module {
         factory { ObserveTasksUseCase(get()) }
         factory { UpsertTaskUseCase(get()) }
+        factory { GenerateTaskRepetitionsUseCase() }
         factory { DeleteTaskUseCase(get()) }
         factory { DeleteTasksUseCase(get()) }
         factory { DeleteAllTasksUseCase(get()) }

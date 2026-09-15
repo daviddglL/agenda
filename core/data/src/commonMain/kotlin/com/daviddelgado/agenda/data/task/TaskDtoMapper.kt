@@ -56,7 +56,7 @@ private fun TaskDto.toIncrementConfig(): IncrementConfig? {
     return IncrementConfig(
         amount = amount,
         everyValue = everyValue,
-        everyUnit = enumOrDefault(everyUnit, IncrementUnit.entries, IncrementUnit.REPETICIONES),
+        everyUnit = enumOrDefault(everyUnit, IncrementUnit.entries, IncrementUnit.DIAS),
     )
 }
 

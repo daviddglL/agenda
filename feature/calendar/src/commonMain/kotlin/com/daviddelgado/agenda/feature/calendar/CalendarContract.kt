@@ -8,7 +8,7 @@ import kotlinx.datetime.LocalDate
 data class CalendarState(
     val visibleMonth: LocalDate,
     val selectedDate: LocalDate,
-    val datesWithTasks: Set<LocalDate> = emptySet(),
+    val taskCountsByDate: Map<LocalDate, Int> = emptyMap(),
 ) : UiState
 
 sealed interface CalendarIntent : UiIntent {

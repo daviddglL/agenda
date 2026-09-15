@@ -28,7 +28,7 @@ data class TasksState(
     val formIsIncremental: Boolean = false,
     val formIncrementAmount: String = "",
     val formIncrementEveryValue: String = "",
-    val formIncrementEveryUnit: IncrementUnit = IncrementUnit.REPETICIONES,
+    val formIncrementEveryUnit: IncrementUnit = IncrementUnit.DIAS,
     val formError: String? = null,
     /** Modo selección múltiple para el borrado conjunto (punto 2 de lo pendiente). */
     val isSelectionMode: Boolean = false,

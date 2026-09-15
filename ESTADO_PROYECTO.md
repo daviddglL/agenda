@@ -5,17 +5,17 @@ decisiones ya tomadas para no repetir trabajo ni contradecirlas sin querer. La s
 técnica obligatoria (no negociable) sigue estando en [markdown.md](markdown.md); este
 documento es el "qué se ha hecho, qué falta y cómo se arranca" sobre esa base.
 
-Última actualización: 2026-09-13 (sesión 4: formulario completo, borrado múltiple,
-ajustes, tombstones offline, WebSocket de tiempo real, tests de UI de Compose, periodo
-de gracia en rachas, `git init` + primer commit, infraestructura de producción).
+Última actualización: 2026-09-14 (sesión 5, continuada otra vez: activar "incremental" al
+crear una tarea ahora genera de verdad copias adicionales de la tarea, repitiendo sus
+características básicas a intervalos regulares).
 
 ## 0. Resumen en una frase
 
 App de agenda/tareas con rachas (KMP: Android + iOS futuro) + backend propio en Ktor con
 usuarios, login JWT, tareas completas con todos sus campos editables desde la UI, borrado
 conjunto, tiempo real por WebSocket y ajustes de cuenta. Offline-first de verdad (Room
-como SSOT + tombstones de borrado), **repo git inicializado**, y **155 tests automáticos
-en verde** (144 unitarios + 11 instrumentados de Compose UI en el emulador). Todo
+como SSOT + tombstones de borrado), **repo git inicializado**, y **176 tests automáticos
+en verde** (160 unitarios + 16 instrumentados de Compose UI en el emulador). Todo
 verificado en caliente en el emulador Android contra el servidor real, no solo compilado.
 
 ## 1. Arrancar todo (lo primero que querrás hacer)
@@ -89,15 +89,21 @@ data class Task(
 enum class TaskCategory { TRABAJO, ESTUDIO, SALUD, PERSONAL, HOGAR, FINANZAS, OTRO }
 enum class TaskPriority { ALTA, MEDIA, BAJA }
 enum class ReminderFrequency { NINGUNO, UNA_VEZ, DIARIO, SEMANAL, MENSUAL, PERSONALIZADO }
-enum class IncrementUnit { REPETICIONES, DIAS, SEMANAS, MESES }
+enum class IncrementUnit { DIAS, SEMANAS, MESES }
 data class IncrementConfig(val amount: Int, val everyValue: Int, val everyUnit: IncrementUnit)
 ```
 
-`IncrementConfig` cubre "es incremental / cuánto se incrementa / cada cuánto": p.ej.
-`amount=5, everyValue=2, everyUnit=SEMANAS` = "+5 cada 2 semanas". **Todos estos campos
-tienen ya selector en el formulario de tareas** (`TasksScreen.TaskFormDialog`): categoría,
-prioridad y recordatorio con `AgendaDropdownField`; hora como texto libre "HH:mm";
-duración numérica; incremento con un interruptor que revela sus tres campos.
+`IncrementConfig` es una tarea "repetitiva": al **crear** (no al editar) una tarea con el
+interruptor "Tarea incremental" activo, se generan de golpe `amount` copias adicionales de
+la tarea, cada una `everyValue` `everyUnit` después de la anterior, repitiendo sus
+características básicas (título, descripción, categoría, prioridad, hora, duración,
+recordatorio) — ver `GenerateTaskRepetitionsUseCase` (`core/domain/.../usecase/UseCases.kt`,
+puro, sin repositorio) y su uso en `TasksViewModel.saveTask()`. Las copias generadas llevan
+`increment = null` (para no volver a generar copias de una copia) e `isCompleted = false`.
+**Todos estos campos tienen ya selector en el formulario de tareas**
+(`TasksScreen.TaskFormDialog`): categoría, prioridad y recordatorio con
+`AgendaDropdownField`; hora como texto libre "HH:mm"; duración numérica; incremento con un
+interruptor que revela "Número de repeticiones" / "Cada cuánto" / unidad.
 
 **Si añades o cambias un campo de tarea, hay que tocarlo en estos cuatro sitios:**
 1. `core/domain/.../model/Models.kt` (fuente de verdad conceptual)
@@ -204,26 +210,27 @@ fuente de verdad; la UI nunca espera a la red.
 **Errores legibles**: el cliente usa `expectSuccess = true` y `apiCall {}` traduce cualquier
 4xx/5xx a `ApiException(statusCode, message)` con el `message` que manda el servidor.
 
-## 6. Tests (155 automáticos, todos en verde)
+## 6. Tests (176 automáticos, todos en verde)
 
-`./gradlew check` ejecuta los 144 unitarios (+ktlint+detekt+lint). Los 11 instrumentados de
+`./gradlew check` ejecuta los 160 unitarios (+ktlint+detekt+lint). Los 16 instrumentados de
 Compose necesitan el emulador arrancado (ver sección 1).
 
 | Módulo | Tests | Qué cubre |
 |---|---|---|
-| `:core:domain` | 21 | casos de uso con Fake Repositories, defaults del modelo, borrado conjunto |
+| `:core:domain` | 28 | casos de uso con Fake Repositories, defaults del modelo, borrado conjunto, `GenerateTaskRepetitionsUseCase` (fechas, ids, campos copiados, casos sin incremento) |
 | `:core:data` | 49 | mapeos, repositorio offline-first **con tombstones**, login/sesión, refresco de token, **periodo de gracia de rachas** |
 | `:feature:login` | 6 unit + 6 UI | reductor MVI + **Compose: campos, error, login OK/fallido, navegación** |
 | `:feature:register` | 5 | reductor MVI de registro |
-| `:feature:tasks` | 20 unit + 5 UI | reductor MVI (formulario completo, selección múltiple) + **Compose: estado vacío, crear tarea, validación** |
-| `:feature:calendar` | 4 | reductor MVI de calendario |
+| `:feature:tasks` | 22 unit + 7 UI | reductor MVI (formulario completo, selección múltiple, **crear tarea incremental genera sus copias, editar una existente no las regenera**) + **Compose: estado vacío, crear tarea, validación, fecha inicial desde el calendario, el formulario es deslizable al activar "incremental"** |
+| `:feature:calendar` | 7 unit + 3 UI | reductor MVI de calendario (incluye conteo de tareas por día) + `CalendarLayoutTest` (tamaño de celda cuadrado dinámico, función pura) + **Compose: la cuadrícula no superpone días, tocar un día concreto selecciona ese día y no otro, un día con tareas muestra cuántas tiene** |
 | `:feature:streaks` | 3 | reductor MVI de rachas |
 | `:feature:settings` | 6 | logout, borrar cuenta (éxito y fallo del servidor) |
+| `:shared` | 4 | `HomeNavigator`: qué pestaña se ve y qué fecha queda pendiente al abrir un día del calendario |
 | `:server` | 30 | API completa (incluida `/tasks/ws`), JWT y bcrypt |
 
 Comandos sueltos: `./gradlew :core:data:testDebugUnitTest`,
-`./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest`
-(estos dos instalan un APK de test en el emulador; tarda ~1-2 min la primera vez).
+`./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest :feature:calendar:connectedDebugAndroidTest`
+(instalan un APK de test en el emulador; tarda ~1-2 min la primera vez).
 
 Cómo están montados (para escribir más igual):
 - **Unitarios**: `commonTest` con `kotlin("test")` + `kotlinx-coroutines-test`. Los
@@ -233,8 +240,8 @@ Cómo están montados (para escribir más igual):
   de la app (`core/data/.../fake/MockHttpClient.kt`). `assertEquals(null, x)` /
   `assertEquals(emptyList(), x)` no compilan por inferencia de tipos en KMP: usa
   `assertNull` / `assertTrue(x.isEmpty())` o `listOf<Tipo>(...)` explícito.
-- **Instrumentados de Compose** (`src/androidInstrumentedTest`, solo en `feature:login` y
-  `feature:tasks`): `createAndroidComposeRule<ComponentActivity>()`, montan la pantalla real
+- **Instrumentados de Compose** (`src/androidInstrumentedTest`, en `feature:login`,
+  `feature:tasks` y `feature:calendar`): `createAndroidComposeRule<ComponentActivity>()`, montan la pantalla real
   pasando un ViewModel real + un Fake Repository propio del fichero de test (no comparten
   código con `commonTest`: son un source set KMP distinto que no lo hereda por defecto).
   Localizan campos por su `label` (`onNodeWithText("Email")`) porque Material3 fusiona la
@@ -265,6 +272,102 @@ Cómo están montados (para escribir más igual):
     la fila en vez de dividirse en columnas. Arreglado y confirmado visualmente.
 - `git log` -> repo inicializado con `git init -b main` y un primer commit con los 167
   ficheros del proyecto (sin `build/`, `local.properties`, `server/data/` ni `.atl/`).
+
+## 7bis. Verificado en caliente el 2026-09-14 (atajo calendario -> editar tarea, con TDD)
+
+- Hecho con TDD real: cada pieza (test en rojo -> código mínimo -> test en verde) antes de
+  tocar produccion, incluido el bug de layout que se describe abajo.
+- **`HomeNavigator`** (`shared/.../HomeNavigator.kt`, nuevo, con 4 tests en
+  `shared/src/commonTest`): decide qué pestaña de Home se ve y, si se llega desde el
+  calendario, qué fecha debe preseleccionar la pantalla de tareas. `TasksScreen` gana los
+  parámetros opcionales `initialDate`/`onDateConsumed` (cubiertos por un test instrumentado
+  nuevo en `feature:tasks`) para consumir esa fecha con `TasksIntent.SelectDate` una sola
+  vez. `App.kt` conecta `CalendarScreen(onOpenDay = ...)` con `TasksScreen(initialDate = ...)`
+  a través de esto.
+- **Bug real encontrado (con test que lo demuestra) y arreglado en vivo**: la cuadrícula de
+  `CalendarScreen.MonthGrid` tenía el mismo problema que ya se dio una vez en
+  `StreaksScreen` (sección 7) — los `Box` de cada día no tenían `Modifier.weight(1f)`, así
+  que los 7 días de cada semana se superponían. No era solo estético: un test instrumentado
+  nuevo (`feature:calendar`, que ahora tiene infraestructura de tests de Compose igual que
+  `feature:login`/`feature:tasks`) demostró que **tocar el día 5 seleccionaba en realidad el
+  día 6** por el solapamiento. Arreglado con el mismo `Modifier.weight(1f)`; confirmado con
+  los tests y visualmente en el emulador (la cuadrícula ya se ve en 7 columnas reales).
+- Flujo end-to-end probado a mano en el emulador Pixel_6a contra el servidor real: crear una
+  tarea desde el día 20 del calendario, confirmar que **no** aparece al ver "hoy" (día 14),
+  volver al día 20 desde el calendario y comprobar que la tarea aparece y que tocarla abre
+  el formulario en modo "Editar tarea" con sus datos. Tarea de prueba borrada al terminar
+  para no dejar basura en la cuenta `e2e@test.com`.
+- `./gradlew check` -> BUILD SUCCESSFUL (148 unitarios + ktlint + detekt + lint).
+- `./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest :feature:calendar:connectedDebugAndroidTest`
+  -> 14/14 tests de Compose UI en verde en el emulador Pixel_6a real.
+- Pendiente de decisión del usuario: commitear estos cambios (working tree tenía cambios sin
+  commitear al terminar la sesión).
+
+## 7ter. Verificado en caliente el 2026-09-14 (calendario cuadrado + formulario deslizable)
+
+Continuación de la misma sesión 5, tras pedir tres retoques concretos.
+
+- **Calendario con celdas cuadradas y dinámicas** (`feature/calendar/.../CalendarLayout.kt`,
+  nuevo, con `CalendarLayoutTest` con TDD): `squareCellSizeDp(maxWidth, maxHeight, columns,
+  rows)` calcula el lado de la celda a partir del espacio realmente disponible (no un valor
+  fijo), usando `BoxWithConstraints` en `CalendarScreen`. Como el ancho (7 columnas) suele
+  ser la dimensión mas estrecha en un telefono en vertical, `Arrangement.SpaceEvenly` reparte
+  el hueco sobrante entre semanas para que la cuadrícula aproveche toda la pantalla en vez de
+  amontonarse arriba con medio hueco en blanco debajo — confirmado visualmente en el emulador
+  antes/después.
+- **Contador de tareas por día**: `CalendarState.datesWithTasks: Set<LocalDate>` pasó a
+  `taskCountsByDate: Map<LocalDate, Int>` (`tasks.groupingBy { it.date }.eachCount()`); cada
+  celda muestra `"($n)"` bajo el número del día cuando `n > 0`. Cubierto con TDD tanto a
+  nivel de `CalendarViewModel` como con un test instrumentado nuevo.
+- **Bug real de layout en `TasksScreen.TaskFormDialog`, arreglado con TDD**: al activar
+  "Tarea incremental" el formulario no tenía ningún contenedor deslizable; el contenido que
+  no cabía en el alto máximo real del `AlertDialog` se recortaba en el borde y el trozo
+  cortado se veía como una caja superpuesta con el campo anterior (reproducido a mano y
+  confirmado con capturas antes del fix). Arreglado envolviendo los campos en un
+  `Column(Modifier.verticalScroll(...))` — **sin fijar un alto máximo a mano**: se probó
+  primero con `heightIn(max = 450.dp)` y rompía un test existente porque ni siquiera el
+  formulario corto (sin incremental) cabía sin desplazarse: se quitó, dejando que el propio
+  límite real del `AlertDialog` decida cuándo hace falta deslizar. Confirmado en el emulador:
+  el formulario corto ya no necesita scroll y el largo (con incremental) se desliza limpio
+  hasta "Unidad de la cadencia" sin ningún solape.
+  - Nota sobre las pruebas automáticas de este último punto: `performScrollTo()` y
+    `assertIsDisplayed()` de Compose UI Test 1.6.7 resultaron poco fiables contra contenido
+    dentro de un `AlertDialog` (encuentran o no encuentran nodos de forma inconsistente según
+    el camino de resolución, aunque el comportamiento real en el dispositivo es correcto). El
+    test final (`activarIncrementalHaceQueElFormularioSeaDeslizable`) comprueba en su lugar,
+    de forma determinista, que el `Column` (con `Modifier.testTag("taskFormScroll")`) expone
+    `SemanticsActions.ScrollBy` — RED/GREEN verificado quitando y devolviendo el fix.
+- `./gradlew check` -> BUILD SUCCESSFUL (151 unitarios + ktlint + detekt + lint).
+- `./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest :feature:calendar:connectedDebugAndroidTest`
+  -> 16/16 tests de Compose UI en verde en el emulador Pixel_6a real.
+
+## 7quater. Verificado en caliente el 2026-09-14 (tarea incremental genera copias reales)
+
+Continuación de la misma sesión 5, tras pedir que "incremental" haga algo de verdad.
+
+- **`IncrementUnit` pierde `REPETICIONES`**: ya no tenía sentido como unidad de un intervalo
+  de fechas (solo quedan `DIAS`/`SEMANAS`/`MESES`). Tocó los cuatro sitios documentados en la
+  sección 3 salvo el servidor, que guarda la unidad como texto libre sin validarla.
+- **`GenerateTaskRepetitionsUseCase`** (nuevo, `core/domain`, puro — con TDD, 7 tests):
+  recibe la tarea recién creada y devuelve `amount` copias, cada una fechada
+  `everyValue`×índice `everyUnit` después de la original, con id nuevo, sin completar y sin
+  su propia configuración de incremento.
+- **`TasksViewModel.saveTask()`**: tras guardar una tarea **nueva** (no al editar) con
+  incremento, sube cada copia con el mismo `UpsertTaskUseCase` de siempre. Cubierto con TDD
+  a nivel de ViewModel (genera las copias con las fechas/campos correctos; editar una tarea
+  incremental existente no regenera nada).
+- Probado a mano en el emulador contra el servidor real: tarea "Flexiones" (categoría HOGAR)
+  con 3 repeticiones cada 7 días -> aparecieron 4 tareas en el calendario (14, 21, 28 de
+  septiembre y 5 de octubre, todas con 1 tarea ese día); abrir la copia del día 21 confirmó
+  mismo título/categoría/prioridad y **"Tarea incremental" desactivado** (no genera copias de
+  copias). Las 4 tareas de prueba se borraron al terminar para no dejar basura en
+  `e2e@test.com`.
+- `./gradlew check` -> BUILD SUCCESSFUL (160 unitarios + ktlint + detekt + lint, incluida la
+  subida de `LongParameterList.constructorThreshold` a 10 en `config/detekt/detekt.yml`
+  porque `TasksViewModel` pasó a recibir 9 casos de uso).
+- `./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest :feature:calendar:connectedDebugAndroidTest`
+  -> 16/16 en verde (sin cambios en la UI instrumentada, la generación de copias no se probó
+  por Compose UI test, solo a nivel de `TasksViewModel` + a mano en el emulador).
 
 ## 8. Producción: URL y certificate pinning (infraestructura lista, sin dominio real)
 
@@ -321,14 +424,15 @@ Code con las tareas de arriba.
    compilados en Xcode.
 2. **`ProductionConfig` sin rellenar de verdad**: falta un dominio real desplegado y sus
    pines de certificado (sección 8).
-3. **Sin editar una tarea desde el calendario**: `CalendarScreen` navega al día pero no hay
-   atajo directo a abrir una tarea concreta en modo edición desde ahí.
-4. **Tombstones sin límite de reintentos**: si un borrado falla indefinidamente (p.ej. el
+3. **Tombstones sin límite de reintentos**: si un borrado falla indefinidamente (p.ej. el
    servidor deja de existir), el tombstone se reintenta en cada sync para siempre; no hay
    una cuenta de intentos ni un tope de tiempo tras el cual abandonar.
-5. **Falta paginación/paginado en `GET /tasks`**: con muchísimas tareas el `syncTasks()`
+4. **Falta paginación/paginado en `GET /tasks`**: con muchísimas tareas el `syncTasks()`
    baja la lista entera cada vez; no es un problema con el volumen esperado de una app
    personal, pero no escalaría a un uso muy intensivo.
+
+(El punto "editar una tarea desde el calendario" que estaba aquí se resolvió en la sesión
+5, ver sección 7bis.)
 
 ## 11. Decisiones tomadas que conviene no deshacer sin pensarlo
 

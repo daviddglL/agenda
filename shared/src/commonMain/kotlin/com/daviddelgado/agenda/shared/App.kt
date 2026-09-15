@@ -16,6 +16,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,8 +43,6 @@ private sealed interface AppScreen {
 
     data object Home : AppScreen
 }
-
-private enum class HomeTab { TASKS, CALENDAR, STREAKS, SETTINGS }
 
 @Composable
 fun App() {
@@ -90,32 +89,33 @@ private fun SplashScreen(onFinished: (hasSession: Boolean) -> Unit) {
 /** @param onLoggedOut vuelve a la pantalla de login: se llama al cerrar sesion o borrar la cuenta. */
 @Composable
 private fun HomeWithTabs(onLoggedOut: () -> Unit) {
-    var tab by remember { mutableStateOf(HomeTab.TASKS) }
+    val navigator = remember { HomeNavigator() }
+    val navState by navigator.state.collectAsState()
 
     Scaffold(
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    selected = tab == HomeTab.TASKS,
-                    onClick = { tab = HomeTab.TASKS },
+                    selected = navState.tab == HomeTab.TASKS,
+                    onClick = { navigator.selectTab(HomeTab.TASKS) },
                     icon = { Icon(Icons.Filled.CheckCircle, contentDescription = "Tareas") },
                     label = { Text("Tareas") },
                 )
                 NavigationBarItem(
-                    selected = tab == HomeTab.CALENDAR,
-                    onClick = { tab = HomeTab.CALENDAR },
+                    selected = navState.tab == HomeTab.CALENDAR,
+                    onClick = { navigator.selectTab(HomeTab.CALENDAR) },
                     icon = { Icon(Icons.Filled.CalendarMonth, contentDescription = "Calendario") },
                     label = { Text("Calendario") },
                 )
                 NavigationBarItem(
-                    selected = tab == HomeTab.STREAKS,
-                    onClick = { tab = HomeTab.STREAKS },
+                    selected = navState.tab == HomeTab.STREAKS,
+                    onClick = { navigator.selectTab(HomeTab.STREAKS) },
                     icon = { Icon(Icons.Filled.LocalFireDepartment, contentDescription = "Rachas") },
                     label = { Text("Rachas") },
                 )
                 NavigationBarItem(
-                    selected = tab == HomeTab.SETTINGS,
-                    onClick = { tab = HomeTab.SETTINGS },
+                    selected = navState.tab == HomeTab.SETTINGS,
+                    onClick = { navigator.selectTab(HomeTab.SETTINGS) },
                     icon = { Icon(Icons.Filled.Settings, contentDescription = "Ajustes") },
                     label = { Text("Ajustes") },
                 )
@@ -123,9 +123,13 @@ private fun HomeWithTabs(onLoggedOut: () -> Unit) {
         },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            when (tab) {
-                HomeTab.TASKS -> TasksScreen()
-                HomeTab.CALENDAR -> CalendarScreen(onOpenDay = { tab = HomeTab.TASKS })
+            when (navState.tab) {
+                HomeTab.TASKS ->
+                    TasksScreen(
+                        initialDate = navState.pendingTaskDate,
+                        onDateConsumed = { navigator.consumePendingTaskDate() },
+                    )
+                HomeTab.CALENDAR -> CalendarScreen(onOpenDay = { navigator.openCalendarDay(it) })
                 HomeTab.STREAKS -> StreaksScreen()
                 HomeTab.SETTINGS -> SettingsScreen(onLoggedOut = onLoggedOut)
             }

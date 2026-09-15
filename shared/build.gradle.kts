@@ -40,6 +40,12 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.koin.android)
         }
+
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.kotlinx.coroutines.test)
+            implementation(libs.kotlinx.datetime)
+        }
     }
 }
 

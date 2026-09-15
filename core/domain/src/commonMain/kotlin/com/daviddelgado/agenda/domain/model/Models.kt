@@ -37,18 +37,18 @@ enum class ReminderFrequency {
     PERSONALIZADO,
 }
 
-/** Unidad de la cadencia de incremento de una tarea incremental (ver [IncrementConfig]). */
+/** Unidad del intervalo entre repeticiones de una tarea incremental (ver [IncrementConfig]). */
 enum class IncrementUnit {
-    REPETICIONES,
     DIAS,
     SEMANAS,
     MESES,
 }
 
 /**
- * Configuracion de una tarea "incremental" (p.ej. habitos con sobrecarga progresiva:
- * "10 flexiones, +5 cada 2 semanas"). `amount` es cuanto se incrementa cada vez;
- * `everyValue`+`everyUnit` es cada cuanto se aplica ese incremento.
+ * Configuracion de una tarea "incremental": al crearla se generan copias adicionales de la
+ * tarea, repitiendo sus caracteristicas basicas. `amount` es cuantas copias repetir;
+ * `everyValue`+`everyUnit` es el intervalo entre cada copia (ver
+ * `GenerateTaskRepetitionsUseCase`).
  */
 data class IncrementConfig(
     val amount: Int,

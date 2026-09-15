@@ -77,7 +77,7 @@ class CalendarViewModelTest {
         }
 
     @Test
-    fun seMarcanLosDiasQueTienenTareas() =
+    fun seCuentanLasTareasDeCadaDia() =
         runTest(dispatcher) {
             val otroDia = hoy.plus(3, DateTimeUnit.DAY)
             val viewModel =
@@ -89,7 +89,7 @@ class CalendarViewModelTest {
                     ),
                 )
 
-            assertEquals(setOf(hoy, otroDia), viewModel.currentState.datesWithTasks)
+            assertEquals(mapOf(hoy to 1, otroDia to 2), viewModel.currentState.taskCountsByDate)
         }
 
     @Test

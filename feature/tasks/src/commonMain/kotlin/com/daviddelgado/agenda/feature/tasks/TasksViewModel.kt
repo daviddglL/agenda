@@ -12,6 +12,7 @@ import com.daviddelgado.agenda.domain.model.TaskPriority
 import com.daviddelgado.agenda.domain.usecase.DeleteAllTasksUseCase
 import com.daviddelgado.agenda.domain.usecase.DeleteTaskUseCase
 import com.daviddelgado.agenda.domain.usecase.DeleteTasksUseCase
+import com.daviddelgado.agenda.domain.usecase.GenerateTaskRepetitionsUseCase
 import com.daviddelgado.agenda.domain.usecase.ObserveTaskChangesUseCase
 import com.daviddelgado.agenda.domain.usecase.ObserveTasksUseCase
 import com.daviddelgado.agenda.domain.usecase.SyncTasksUseCase
@@ -52,6 +53,7 @@ class TasksViewModel(
     private val toggleTaskCompletionUseCase: ToggleTaskCompletionUseCase,
     private val syncTasksUseCase: SyncTasksUseCase,
     private val observeTaskChangesUseCase: ObserveTaskChangesUseCase,
+    private val generateTaskRepetitionsUseCase: GenerateTaskRepetitionsUseCase,
 ) : MviViewModel<TasksState, TasksIntent, TasksEffect>(
         TasksState(selectedDate = Clock.System.todayIn(TimeZone.currentSystemDefault())),
     ) {
@@ -142,7 +144,7 @@ class TasksViewModel(
                 formIsIncremental = false,
                 formIncrementAmount = "",
                 formIncrementEveryValue = "",
-                formIncrementEveryUnit = IncrementUnit.REPETICIONES,
+                formIncrementEveryUnit = IncrementUnit.DIAS,
                 formError = null,
             )
         }
@@ -163,7 +165,7 @@ class TasksViewModel(
                 formIsIncremental = task.isIncremental,
                 formIncrementAmount = task.increment?.amount?.toString() ?: "",
                 formIncrementEveryValue = task.increment?.everyValue?.toString() ?: "",
-                formIncrementEveryUnit = task.increment?.everyUnit ?: IncrementUnit.REPETICIONES,
+                formIncrementEveryUnit = task.increment?.everyUnit ?: IncrementUnit.DIAS,
                 formError = null,
             )
         }
@@ -171,6 +173,7 @@ class TasksViewModel(
 
     private fun saveTask() {
         val state = currentState
+        val isNewTask = state.editingTaskId == null
         if (state.formTitle.isBlank()) {
             setState { copy(formError = "El titulo no puede estar vacio") }
             return
@@ -219,6 +222,13 @@ class TasksViewModel(
 
         viewModelScope.launch {
             upsertTaskUseCase(task)
+            // Las copias solo se generan al crear una tarea incremental nueva, nunca al
+            // editar una ya existente (evita duplicar de nuevo en cada guardado).
+            if (isNewTask) {
+                generateTaskRepetitionsUseCase(task, ::randomEntityId).forEach { copia ->
+                    upsertTaskUseCase(copia)
+                }
+            }
             setState { copy(isFormVisible = false) }
         }
     }
