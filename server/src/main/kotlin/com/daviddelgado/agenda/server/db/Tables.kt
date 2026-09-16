@@ -11,6 +11,7 @@ object Users : Table("users") {
     val name = varchar("name", 120)
     val email = varchar("email", 190).uniqueIndex()
     val passwordHash = varchar("password_hash", 255)
+    val tokenVersion = integer("token_version").default(0)
     val createdAt = timestamp("created_at")
 
     override val primaryKey = PrimaryKey(id)

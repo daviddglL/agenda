@@ -24,26 +24,37 @@ class JwtConfig(
             .withClaim("type", "access")
             .build()
 
-    fun generateAccessToken(userId: String): String =
+    /** `tokenVersion` viaja en el claim "tv"; ver [DecodedRefreshToken] y su uso al refrescar. */
+    fun generateAccessToken(
+        userId: String,
+        tokenVersion: Int,
+    ): String =
         JWT.create()
             .withIssuer(issuer)
             .withAudience(audience)
             .withClaim("type", "access")
+            .withClaim("tv", tokenVersion)
             .withSubject(userId)
             .withExpiresAt(Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(30)))
             .sign(algorithm)
 
-    fun generateRefreshToken(userId: String): String =
+    fun generateRefreshToken(
+        userId: String,
+        tokenVersion: Int,
+    ): String =
         JWT.create()
             .withIssuer(issuer)
             .withAudience(audience)
             .withClaim("type", "refresh")
+            .withClaim("tv", tokenVersion)
             .withSubject(userId)
             .withExpiresAt(Date(System.currentTimeMillis() + TimeUnit.DAYS.toMillis(30)))
             .sign(algorithm)
 
-    /** Valida un refresh token y devuelve el userId si es valido, o null si no lo es. */
-    fun verifyRefreshToken(token: String): String? =
+    data class DecodedRefreshToken(val userId: String, val tokenVersion: Int)
+
+    /** Valida un refresh token y devuelve su payload, o null si no es valido. */
+    fun verifyRefreshToken(token: String): DecodedRefreshToken? =
         runCatching {
             val decoded =
                 JWT.require(algorithm)
@@ -52,6 +63,6 @@ class JwtConfig(
                     .withClaim("type", "refresh")
                     .build()
                     .verify(token)
-            decoded.subject
+            DecodedRefreshToken(decoded.subject, decoded.getClaim("tv").asInt())
         }.getOrNull()
 }

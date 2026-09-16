@@ -55,8 +55,8 @@ private suspend fun handleRegister(
             userId = user.id,
             name = user.name,
             email = user.email,
-            accessToken = jwtConfig.generateAccessToken(user.id),
-            refreshToken = jwtConfig.generateRefreshToken(user.id),
+            accessToken = jwtConfig.generateAccessToken(user.id, user.tokenVersion),
+            refreshToken = jwtConfig.generateRefreshToken(user.id, user.tokenVersion),
         ),
     )
 }
@@ -79,8 +79,8 @@ private suspend fun handleLogin(
             userId = user.id,
             name = user.name,
             email = user.email,
-            accessToken = jwtConfig.generateAccessToken(user.id),
-            refreshToken = jwtConfig.generateRefreshToken(user.id),
+            accessToken = jwtConfig.generateAccessToken(user.id, user.tokenVersion),
+            refreshToken = jwtConfig.generateRefreshToken(user.id, user.tokenVersion),
         ),
     )
 }
@@ -91,10 +91,10 @@ private suspend fun handleRefresh(
     jwtConfig: JwtConfig,
 ) {
     val request = call.receive<RefreshRequest>()
-    val userId = jwtConfig.verifyRefreshToken(request.refreshToken)
-    val user = userId?.let(userRepository::findById)
+    val decoded = jwtConfig.verifyRefreshToken(request.refreshToken)
+    val user = decoded?.userId?.let(userRepository::findById)
 
-    if (user == null) {
+    if (user == null || decoded.tokenVersion != user.tokenVersion) {
         call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Refresh token invalido o caducado"))
         return
     }
@@ -104,8 +104,8 @@ private suspend fun handleRefresh(
             userId = user.id,
             name = user.name,
             email = user.email,
-            accessToken = jwtConfig.generateAccessToken(user.id),
-            refreshToken = jwtConfig.generateRefreshToken(user.id),
+            accessToken = jwtConfig.generateAccessToken(user.id, user.tokenVersion),
+            refreshToken = jwtConfig.generateRefreshToken(user.id, user.tokenVersion),
         ),
     )
 }

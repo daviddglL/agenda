@@ -5,6 +5,8 @@ import com.daviddelgado.agenda.server.dto.LoginRequest
 import com.daviddelgado.agenda.server.dto.RefreshRequest
 import com.daviddelgado.agenda.server.dto.RegisterRequest
 import com.daviddelgado.agenda.server.dto.UserResponse
+import com.daviddelgado.agenda.server.repository.UserRepository
+import com.daviddelgado.agenda.server.security.PasswordHasher
 import io.ktor.client.call.body
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.get
@@ -158,5 +160,21 @@ class AuthRoutesTest {
                 }.last()
 
             assertEquals(HttpStatusCode.TooManyRequests, intentoQueDeberiaBloquear.status)
+        }
+
+    @Test
+    fun trasCambiarLaContrasenaElRefreshTokenAntiguoDejaDeServir() =
+        withApi { client ->
+            val session = client.registrarUsuario(email = "version@test.com")
+
+            UserRepository().updatePassword(session.userId, PasswordHasher.hash("nueva123"))
+
+            val response =
+                client.post("/auth/refresh") {
+                    contentType(ContentType.Application.Json)
+                    setBody(RefreshRequest(session.refreshToken))
+                }
+
+            assertEquals(HttpStatusCode.Unauthorized, response.status)
         }
 }
