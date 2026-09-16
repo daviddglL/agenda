@@ -6,6 +6,7 @@ import android.content.Context
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.daviddelgado.agenda.common.logging.AgendaLogger
 import com.daviddelgado.agenda.domain.usecase.RegisterFcmTokenUseCase
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -16,6 +17,7 @@ import org.koin.android.ext.android.inject
 
 private const val REMINDER_CHANNEL_ID = "agenda_reminders"
 private const val REMINDER_NOTIFICATION_ID = 1001
+private const val LOG_TAG = "AgendaFirebaseMessagingService"
 
 /**
  * Recibe los recordatorios push que manda el servidor (ver ReminderJob en :server). Cada
@@ -28,7 +30,10 @@ class AgendaFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        scope.launch { registerFcmToken(token) }
+        scope.launch {
+            registerFcmToken(token)
+                .onFailure { AgendaLogger.w(LOG_TAG, "No se pudo registrar el nuevo token FCM", it) }
+        }
     }
 
     override fun onMessageReceived(message: RemoteMessage) {

@@ -1,10 +1,13 @@
 package com.daviddelgado.agenda.feature.login
 
 import androidx.lifecycle.viewModelScope
+import com.daviddelgado.agenda.common.logging.AgendaLogger
 import com.daviddelgado.agenda.common.mvi.MviViewModel
 import com.daviddelgado.agenda.domain.usecase.LoginUseCase
 import com.daviddelgado.agenda.domain.usecase.RegisterFcmTokenUseCase
 import kotlinx.coroutines.launch
+
+private const val LOG_TAG = "LoginViewModel"
 
 class LoginViewModel(
     private val loginUseCase: LoginUseCase,
@@ -45,7 +48,10 @@ class LoginViewModel(
     /** Tras iniciar sesion, manda al servidor el token push de este dispositivo (Task 10). */
     private fun registrarTokenFcm() {
         viewModelScope.launch {
-            fcmTokenProvider.currentToken()?.let { token -> registerFcmTokenUseCase(token) }
+            fcmTokenProvider.currentToken()?.let { token ->
+                registerFcmTokenUseCase(token)
+                    .onFailure { AgendaLogger.w(LOG_TAG, "No se pudo registrar el token FCM tras iniciar sesion", it) }
+            }
         }
     }
 }
