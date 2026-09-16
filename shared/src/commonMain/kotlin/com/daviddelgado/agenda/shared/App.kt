@@ -26,6 +26,8 @@ import androidx.compose.ui.Modifier
 import com.daviddelgado.agenda.designsystem.theme.AgendaTheme
 import com.daviddelgado.agenda.feature.calendar.CalendarScreen
 import com.daviddelgado.agenda.feature.login.LoginScreen
+import com.daviddelgado.agenda.feature.passwordreset.ForgotPasswordScreen
+import com.daviddelgado.agenda.feature.passwordreset.ResetPasswordScreen
 import com.daviddelgado.agenda.feature.register.RegisterScreen
 import com.daviddelgado.agenda.feature.settings.SettingsScreen
 import com.daviddelgado.agenda.feature.streaks.StreaksScreen
@@ -36,9 +38,13 @@ import org.koin.compose.koinInject
 private sealed interface AppScreen {
     data object Splash : AppScreen
 
-    data object Login : AppScreen
+    data class Login(val justReset: Boolean = false) : AppScreen
 
     data object Register : AppScreen
+
+    data object ForgotPassword : AppScreen
+
+    data class ResetPassword(val email: String) : AppScreen
 
     data object Home : AppScreen
 }
@@ -48,18 +54,27 @@ fun App() {
     AgendaTheme {
         var screen by remember { mutableStateOf<AppScreen>(AppScreen.Splash) }
 
-        when (screen) {
+        when (val current = screen) {
             AppScreen.Splash ->
                 SplashScreen(
-                    onFinished = { hasSession -> screen = if (hasSession) AppScreen.Home else AppScreen.Login },
+                    onFinished = { hasSession -> screen = if (hasSession) AppScreen.Home else AppScreen.Login() },
                 )
-            AppScreen.Login ->
+            is AppScreen.Login ->
                 LoginScreen(
                     onNavigateToHome = { screen = AppScreen.Home },
                     onNavigateToRegister = { screen = AppScreen.Register },
+                    onNavigateToForgotPassword = { screen = AppScreen.ForgotPassword },
+                    justReset = current.justReset,
                 )
             AppScreen.Register -> RegisterScreen(onNavigateToHome = { screen = AppScreen.Home })
-            AppScreen.Home -> HomeWithTabs(onLoggedOut = { screen = AppScreen.Login })
+            AppScreen.ForgotPassword ->
+                ForgotPasswordScreen(onCodeSent = { email -> screen = AppScreen.ResetPassword(email) })
+            is AppScreen.ResetPassword ->
+                ResetPasswordScreen(
+                    email = current.email,
+                    onPasswordReset = { screen = AppScreen.Login(justReset = true) },
+                )
+            AppScreen.Home -> HomeWithTabs(onLoggedOut = { screen = AppScreen.Login() })
         }
     }
 }

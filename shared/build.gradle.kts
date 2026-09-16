@@ -24,6 +24,7 @@ kotlin {
             implementation(projects.core.data)
             implementation(projects.feature.login)
             implementation(projects.feature.register)
+            implementation(projects.feature.passwordreset)
             implementation(projects.feature.calendar)
             implementation(projects.feature.tasks)
             implementation(projects.feature.streaks)

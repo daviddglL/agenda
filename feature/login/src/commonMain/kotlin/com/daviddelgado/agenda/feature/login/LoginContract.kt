@@ -19,12 +19,16 @@ sealed interface LoginIntent : UiIntent {
     data object Submit : LoginIntent
 
     data object NavigateToRegister : LoginIntent
+
+    data object NavigateToForgotPassword : LoginIntent
 }
 
 sealed interface LoginEffect : UiEffect {
     data object NavigateToHome : LoginEffect
 
     data object NavigateToRegister : LoginEffect
+
+    data object NavigateToForgotPassword : LoginEffect
 
     data class ShowError(val message: String) : LoginEffect
 }

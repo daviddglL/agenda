@@ -4,6 +4,7 @@ import com.daviddelgado.agenda.data.di.dataModule
 import com.daviddelgado.agenda.domain.di.domainModule
 import com.daviddelgado.agenda.feature.calendar.calendarModule
 import com.daviddelgado.agenda.feature.login.loginModule
+import com.daviddelgado.agenda.feature.passwordreset.passwordResetModule
 import com.daviddelgado.agenda.feature.register.registerModule
 import com.daviddelgado.agenda.feature.settings.settingsModule
 import com.daviddelgado.agenda.feature.streaks.streaksModule
@@ -24,6 +25,7 @@ val appModules: List<Module> =
         domainModule,
         loginModule,
         registerModule,
+        passwordResetModule,
         calendarModule,
         tasksModule,
         streaksModule,

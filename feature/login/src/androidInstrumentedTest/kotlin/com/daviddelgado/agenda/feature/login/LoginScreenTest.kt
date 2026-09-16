@@ -70,11 +70,13 @@ class LoginScreenTest {
         repository: FakeAuthRepository = FakeAuthRepository(),
         onNavigateToHome: () -> Unit = {},
         onNavigateToRegister: () -> Unit = {},
+        onNavigateToForgotPassword: () -> Unit = {},
     ) {
         composeRule.setContent {
             LoginScreen(
                 onNavigateToHome = onNavigateToHome,
                 onNavigateToRegister = onNavigateToRegister,
+                onNavigateToForgotPassword = onNavigateToForgotPassword,
                 viewModel =
                     LoginViewModel(
                         LoginUseCase(repository),
@@ -148,6 +150,16 @@ class LoginScreenTest {
         composeRule.onNodeWithText("Crear una cuenta").performClick()
 
         composeRule.waitUntil(timeoutMillis = LOGIN_TIMEOUT_MILLIS) { navegoARegistro }
+    }
+
+    @Test
+    fun pulsarOlvidasteTuContrasenaNavegaAlFormularioDeRecuperacion() {
+        var navegoARecuperar = false
+        montarPantalla(onNavigateToForgotPassword = { navegoARecuperar = true })
+
+        composeRule.onNodeWithText("Olvidaste tu contrasena?").performClick()
+
+        composeRule.waitUntil(timeoutMillis = LOGIN_TIMEOUT_MILLIS) { navegoARecuperar }
     }
 }
 

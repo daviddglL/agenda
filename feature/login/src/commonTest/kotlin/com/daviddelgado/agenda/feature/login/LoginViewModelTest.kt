@@ -172,6 +172,18 @@ class LoginViewModelTest {
         }
 
     @Test
+    fun pedirRecuperarContrasenaEmiteElEfectoDeNavegacion() =
+        runTest(dispatcher) {
+            val viewModel = crearViewModel()
+            val efectos = mutableListOf<LoginEffect>()
+            viewModel.effect.onEach { efectos += it }.launchIn(backgroundScope)
+
+            viewModel.onIntent(LoginIntent.NavigateToForgotPassword)
+
+            assertEquals(listOf<LoginEffect>(LoginEffect.NavigateToForgotPassword), efectos)
+        }
+
+    @Test
     fun elLoginCorrectoRegistraElTokenFcmEnElServidor() =
         runTest(dispatcher) {
             val repository = FakeAuthRepository()

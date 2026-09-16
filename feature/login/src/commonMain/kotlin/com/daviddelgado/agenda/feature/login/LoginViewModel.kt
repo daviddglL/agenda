@@ -19,6 +19,7 @@ class LoginViewModel(
             is LoginIntent.EmailChanged -> setState { copy(email = intent.value, errorMessage = null) }
             is LoginIntent.PasswordChanged -> setState { copy(password = intent.value, errorMessage = null) }
             LoginIntent.NavigateToRegister -> sendEffect(LoginEffect.NavigateToRegister)
+            LoginIntent.NavigateToForgotPassword -> sendEffect(LoginEffect.NavigateToForgotPassword)
             LoginIntent.Submit -> submit()
         }
     }
