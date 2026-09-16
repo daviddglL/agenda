@@ -57,4 +57,34 @@ class FcmTokenRoutesTest {
 
             assertEquals(HttpStatusCode.NoContent, segunda.status)
         }
+
+    @Test
+    fun tokenEnBlancoResponde400() =
+        withApi { client ->
+            val accessToken = client.registrarUsuario().accessToken
+
+            val response =
+                client.post("/users/me/fcm-token") {
+                    bearerAuth(accessToken)
+                    contentType(ContentType.Application.Json)
+                    setBody(FcmTokenRequest("   "))
+                }
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+        }
+
+    @Test
+    fun tokenDemasiadoLargoResponde400() =
+        withApi { client ->
+            val accessToken = client.registrarUsuario().accessToken
+
+            val response =
+                client.post("/users/me/fcm-token") {
+                    bearerAuth(accessToken)
+                    contentType(ContentType.Application.Json)
+                    setBody(FcmTokenRequest("a".repeat(256)))
+                }
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+        }
 }

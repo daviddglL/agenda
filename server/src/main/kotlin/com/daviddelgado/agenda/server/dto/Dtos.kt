@@ -74,3 +74,13 @@ fun TaskDto.validationError(): String? {
     if (time != null && runCatching { java.time.LocalTime.parse(time) }.isFailure) return "Hora invalida"
     return null
 }
+
+// Debe coincidir con FcmTokens.token (varchar("token", 255)) en Tables.kt.
+private const val MAX_FCM_TOKEN_LENGTH = 255
+
+/** Devuelve el motivo por el que el token FCM no es valido, o null si lo es. */
+fun FcmTokenRequest.validationError(): String? {
+    if (token.isBlank()) return "El token no puede estar vacio"
+    if (token.length > MAX_FCM_TOKEN_LENGTH) return "El token no puede superar $MAX_FCM_TOKEN_LENGTH caracteres"
+    return null
+}

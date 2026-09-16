@@ -77,8 +77,18 @@ object NoOpPushSender : PushSender {
     }
 }
 
+private val providePushSenderLogger: Logger = LoggerFactory.getLogger("providePushSender")
+
 /** @param serviceAccountJsonPath normalmente `System.getenv("AGENDA_FIREBASE_SERVICE_ACCOUNT_JSON")`. */
 fun providePushSender(serviceAccountJsonPath: String?): PushSender =
     serviceAccountJsonPath
-        ?.let { runCatching { FirebasePushSender(it) }.getOrNull() }
+        ?.let { path ->
+            runCatching { FirebasePushSender(path) }
+                .onFailure { error ->
+                    providePushSenderLogger.error(
+                        "No se pudo inicializar FirebasePushSender con $path; se usara NoOpPushSender",
+                        error,
+                    )
+                }.getOrNull()
+        }
         ?: NoOpPushSender
