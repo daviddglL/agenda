@@ -24,7 +24,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.daviddelgado.agenda.designsystem.theme.AgendaTheme
-import com.daviddelgado.agenda.domain.usecase.RestoreSessionUseCase
 import com.daviddelgado.agenda.feature.calendar.CalendarScreen
 import com.daviddelgado.agenda.feature.login.LoginScreen
 import com.daviddelgado.agenda.feature.register.RegisterScreen
@@ -70,14 +69,15 @@ private const val SPLASH_MILLIS = 1200L
 /**
  * Arranque de la app: mientras se ve el splash se intenta recuperar la sesion guardada
  * (`GET /users/me` con el token cifrado del dispositivo). Si el token sigue siendo valido
- * se entra directo a Home; si no, al login.
+ * se entra directo a Home (y de paso se (re)registra el token push del dispositivo, Task 10:
+ * es el arranque mas comun, no solo el que sigue a un login); si no, al login.
  */
 @Composable
 private fun SplashScreen(onFinished: (hasSession: Boolean) -> Unit) {
-    val restoreSession = koinInject<RestoreSessionUseCase>()
+    val splashSessionHandler = koinInject<SplashSessionHandler>()
 
     LaunchedEffect(Unit) {
-        val user = restoreSession()
+        val user = splashSessionHandler.restoreSession()
         delay(SPLASH_MILLIS)
         onFinished(user != null)
     }
