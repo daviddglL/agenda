@@ -60,6 +60,14 @@ data class ErrorResponse(val message: String)
 @Serializable
 data class FcmTokenRequest(val token: String)
 
+/** Cuerpo de `POST /auth/forgot-password`. */
+@Serializable
+data class ForgotPasswordRequest(val email: String)
+
+/** Cuerpo de `POST /auth/reset-password`. */
+@Serializable
+data class ResetPasswordRequest(val email: String, val code: String, val newPassword: String)
+
 private const val MAX_TITLE_LENGTH = 200
 private const val MAX_DESCRIPTION_LENGTH = 2000
 
@@ -82,5 +90,14 @@ private const val MAX_FCM_TOKEN_LENGTH = 255
 fun FcmTokenRequest.validationError(): String? {
     if (token.isBlank()) return "El token no puede estar vacio"
     if (token.length > MAX_FCM_TOKEN_LENGTH) return "El token no puede superar $MAX_FCM_TOKEN_LENGTH caracteres"
+    return null
+}
+
+private const val RESET_CODE_LENGTH = 6
+
+/** Devuelve el motivo por el que la peticion de reseteo no es valida, o null si lo es. */
+fun ResetPasswordRequest.validationError(): String? {
+    if (code.length != RESET_CODE_LENGTH || code.any { !it.isDigit() }) return "Codigo invalido"
+    if (newPassword.length < 6) return "La contrasena nueva debe tener al menos 6 caracteres"
     return null
 }

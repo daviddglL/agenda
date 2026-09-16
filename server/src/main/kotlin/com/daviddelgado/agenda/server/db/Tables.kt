@@ -58,3 +58,23 @@ object FcmTokens : Table("fcm_tokens") {
 
     override val primaryKey = PrimaryKey(userId, token)
 }
+
+/**
+ * Codigo de un solo uso para resetear la contrasena. Un unico codigo activo por usuario
+ * (PrimaryKey = userId): pedir uno nuevo sustituye cualquier codigo anterior sin caducar,
+ * asi que solo el ultimo codigo pedido sirve. `attempts` protege contra fuerza bruta sobre
+ * el codigo de 6 digitos (1 millon de combinaciones no es mucho): tras 5 intentos fallidos
+ * el codigo deja de aceptarse, hay que pedir uno nuevo. Se guarda un hash SHA-256, no el
+ * codigo en claro (ver `sha256Hex` en AuthRoutes.kt) - un codigo de 15 minutos de vida no
+ * necesita el coste de bcrypt, la proteccion real es el limite de intentos.
+ */
+object PasswordResetCodes : Table("password_reset_codes") {
+    val userId =
+        varchar("user_id", 36)
+            .references(Users.id, onDelete = org.jetbrains.exposed.sql.ReferenceOption.CASCADE)
+    val codeHash = varchar("code_hash", 64)
+    val expiresAt = timestamp("expires_at")
+    val attempts = integer("attempts").default(0)
+
+    override val primaryKey = PrimaryKey(userId)
+}

@@ -4,6 +4,8 @@ import com.daviddelgado.agenda.server.agendaModule
 import com.daviddelgado.agenda.server.dto.AuthResponse
 import com.daviddelgado.agenda.server.dto.RegisterRequest
 import com.daviddelgado.agenda.server.dto.TaskDto
+import com.daviddelgado.agenda.server.email.EmailSender
+import com.daviddelgado.agenda.server.email.NoOpEmailSender
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -20,19 +22,22 @@ import kotlin.random.Random
 /**
  * Levanta la API real (rutas, JWT, Exposed) sobre una H2 **en memoria y distinta en cada
  * test**, para que los tests no compartan estado entre si ni toquen el fichero de
- * desarrollo `server/data/agenda.mv.db`.
+ * desarrollo `server/data/agenda.mv.db`. `emailSender` es sustituible para que los tests de
+ * recuperacion de contrasena puedan capturar el codigo mandado sin credenciales SMTP reales.
  */
-fun withApi(block: suspend ApplicationTestBuilder.(HttpClient) -> Unit) =
-    testApplication {
-        val databaseName = "agenda-test-${Random.nextLong()}"
-        application { agendaModule("jdbc:h2:mem:$databaseName;DB_CLOSE_DELAY=-1") }
-        val client =
-            createClient {
-                install(ContentNegotiation) { json() }
-                install(WebSockets)
-            }
-        block(client)
-    }
+fun withApi(
+    emailSender: EmailSender = NoOpEmailSender,
+    block: suspend ApplicationTestBuilder.(HttpClient) -> Unit,
+) = testApplication {
+    val databaseName = "agenda-test-${Random.nextLong()}"
+    application { agendaModule("jdbc:h2:mem:$databaseName;DB_CLOSE_DELAY=-1", emailSender = emailSender) }
+    val client =
+        createClient {
+            install(ContentNegotiation) { json() }
+            install(WebSockets)
+        }
+    block(client)
+}
 
 /** Registra un usuario nuevo (email unico) y devuelve su sesion con los dos tokens. */
 suspend fun HttpClient.registrarUsuario(

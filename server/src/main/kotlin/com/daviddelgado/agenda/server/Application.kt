@@ -2,9 +2,12 @@ package com.daviddelgado.agenda.server
 
 import com.daviddelgado.agenda.server.db.DatabaseFactory
 import com.daviddelgado.agenda.server.dto.ErrorResponse
+import com.daviddelgado.agenda.server.email.EmailSender
+import com.daviddelgado.agenda.server.email.provideEmailSender
 import com.daviddelgado.agenda.server.push.providePushSender
 import com.daviddelgado.agenda.server.reminder.runReminderLoop
 import com.daviddelgado.agenda.server.repository.FcmTokenRepository
+import com.daviddelgado.agenda.server.repository.PasswordResetRepository
 import com.daviddelgado.agenda.server.repository.TaskRepository
 import com.daviddelgado.agenda.server.repository.UserRepository
 import com.daviddelgado.agenda.server.routes.authRoutes
@@ -77,7 +80,17 @@ private fun startReminderLoop(dispatcher: CoroutineDispatcher = Dispatchers.IO) 
  * @param jdbcUrl base de datos a usar. Los tests pasan una H2 en memoria distinta por test
  * para no compartir estado entre ellos ni tocar el fichero de desarrollo.
  */
-fun Application.agendaModule(jdbcUrl: String = defaultJdbcUrl) {
+fun Application.agendaModule(
+    jdbcUrl: String = defaultJdbcUrl,
+    emailSender: EmailSender =
+        provideEmailSender(
+            host = System.getenv("AGENDA_SMTP_HOST"),
+            port = System.getenv("AGENDA_SMTP_PORT")?.toIntOrNull(),
+            username = System.getenv("AGENDA_SMTP_USERNAME"),
+            password = System.getenv("AGENDA_SMTP_PASSWORD"),
+            from = System.getenv("AGENDA_SMTP_FROM"),
+        ),
+) {
     DatabaseFactory.init(jdbcUrl)
 
     // En desarrollo se usa un secreto por defecto; en produccion SIEMPRE se debe fijar
@@ -87,6 +100,7 @@ fun Application.agendaModule(jdbcUrl: String = defaultJdbcUrl) {
     val userRepository = UserRepository()
     val taskRepository = TaskRepository()
     val fcmTokenRepository = FcmTokenRepository()
+    val passwordResetRepository = PasswordResetRepository()
 
     install(ContentNegotiation) {
         json(
@@ -138,7 +152,7 @@ fun Application.agendaModule(jdbcUrl: String = defaultJdbcUrl) {
     }
 
     routing {
-        authRoutes(userRepository, jwtConfig)
+        authRoutes(userRepository, jwtConfig, passwordResetRepository, emailSender)
         userRoutes(userRepository, fcmTokenRepository)
         taskRoutes(taskRepository)
     }
