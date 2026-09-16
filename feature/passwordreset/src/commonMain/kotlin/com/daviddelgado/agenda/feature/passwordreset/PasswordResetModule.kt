@@ -6,4 +6,5 @@ import org.koin.dsl.module
 val passwordResetModule =
     module {
         viewModel { ForgotPasswordViewModel(get()) }
+        viewModel { ResetPasswordViewModel(get()) }
     }
