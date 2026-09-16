@@ -32,6 +32,8 @@ jbcrypt = "0.4"
 logback = "1.5.6"
 napier = "2.7.1"
 firebaseAdmin = "9.4.1"
+googleServices = "4.4.2"
+firebaseBom = "33.5.1"
 
 [libraries]
 # Compose / lifecycle (multiplatform)
@@ -105,6 +107,8 @@ java-jwt = { group = "com.auth0", name = "java-jwt", version.ref = "javaJwt" }
 jbcrypt = { group = "org.mindrot", name = "jbcrypt", version.ref = "jbcrypt" }
 logback-classic = { group = "ch.qos.logback", name = "logback-classic", version.ref = "logback" }
 firebase-admin = { group = "com.google.firebase", name = "firebase-admin", version.ref = "firebaseAdmin" }
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging-ktx" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -119,3 +123,4 @@ ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 room = { id = "androidx.room", version.ref = "room" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }

@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -45,8 +46,12 @@ kotlin {
 dependencies {
     implementation(projects.shared)
     implementation(projects.core.designsystem)
+    implementation(projects.core.domain)
+    implementation(projects.core.network)
     implementation(libs.androidx.activity.compose)
     implementation(libs.koin.android)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

@@ -118,3 +118,8 @@ class LogoutUseCase(private val repository: AuthRepository) {
 class DeleteAccountUseCase(private val repository: AuthRepository) {
     suspend operator fun invoke(): Result<Unit> = repository.deleteAccount()
 }
+
+/** Registra en el servidor el token FCM de este dispositivo para recibir recordatorios push. */
+class RegisterFcmTokenUseCase(private val repository: AuthRepository) {
+    suspend operator fun invoke(token: String): Result<Unit> = repository.registerFcmToken(token)
+}

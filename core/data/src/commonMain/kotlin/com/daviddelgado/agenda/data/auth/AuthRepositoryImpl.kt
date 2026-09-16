@@ -62,6 +62,8 @@ class AuthRepositoryImpl(
             .getOrNull()
     }
 
+    override suspend fun registerFcmToken(token: String): Result<Unit> = runCatching { authApi.registerFcmToken(token) }
+
     private suspend fun clearLocalData() {
         taskDao.deleteAll()
         pendingDeletionDao.deleteAll()

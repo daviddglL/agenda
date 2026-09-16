@@ -2,6 +2,7 @@ package com.daviddelgado.agenda.network.api
 
 import com.daviddelgado.agenda.network.apiCall
 import com.daviddelgado.agenda.network.dto.AuthResponse
+import com.daviddelgado.agenda.network.dto.FcmTokenRequest
 import com.daviddelgado.agenda.network.dto.LoginRequest
 import com.daviddelgado.agenda.network.dto.RegisterRequest
 import com.daviddelgado.agenda.network.dto.UserResponse
@@ -47,6 +48,15 @@ class AuthApi(private val client: HttpClient) {
     /** Borra la cuenta; el servidor borra sus tareas en cascada. */
     suspend fun deleteAccount() {
         apiCall { client.delete("users/me") }
+    }
+
+    suspend fun registerFcmToken(token: String) {
+        apiCall {
+            client.post("users/me/fcm-token") {
+                contentType(ContentType.Application.Json)
+                setBody(FcmTokenRequest(token))
+            }
+        }
     }
 
     /**

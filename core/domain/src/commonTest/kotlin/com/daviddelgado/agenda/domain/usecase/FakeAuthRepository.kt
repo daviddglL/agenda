@@ -15,6 +15,7 @@ class FakeAuthRepository(
         private set
     var accountDeleted = false
         private set
+    var tokenRegistrado: String? = null
 
     override fun observeCurrentUser(): Flow<User?> = current
 
@@ -40,6 +41,11 @@ class FakeAuthRepository(
         failWith?.let { return Result.failure(it) }
         accountDeleted = true
         current.value = null
+        return Result.success(Unit)
+    }
+
+    override suspend fun registerFcmToken(token: String): Result<Unit> {
+        tokenRegistrado = token
         return Result.success(Unit)
     }
 

@@ -11,6 +11,10 @@ data class RegisterRequest(val name: String, val email: String, val password: St
 @Serializable
 data class RefreshRequest(val refreshToken: String)
 
+/** Token FCM de este dispositivo, para `POST /users/me/fcm-token` (ver ReminderJob en :server). */
+@Serializable
+data class FcmTokenRequest(val token: String)
+
 @Serializable
 data class AuthResponse(
     val userId: String,

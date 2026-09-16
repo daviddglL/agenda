@@ -69,4 +69,7 @@ interface AuthRepository {
 
     /** Borra la cuenta y, en cascada (servidor + local), todas sus tareas. */
     suspend fun deleteAccount(): Result<Unit>
+
+    /** Manda al servidor el token FCM de este dispositivo para poder recibir recordatorios push. */
+    suspend fun registerFcmToken(token: String): Result<Unit>
 }
