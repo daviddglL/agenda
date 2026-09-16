@@ -5,22 +5,22 @@ decisiones ya tomadas para no repetir trabajo ni contradecirlas sin querer. La s
 técnica obligatoria (no negociable) sigue estando en [markdown.md](markdown.md); este
 documento es el "qué se ha hecho, qué falta y cómo se arranca" sobre esa base.
 
-Última actualización: 2026-09-16 (cierre del plan `calidad-seguridad-recordatorios`:
-logging con Napier, accesibilidad del calendario, CI en GitHub Actions, validación y rate
-limiting del servidor, recordatorios push reales con Firebase, registro del token FCM en el
-cliente Android y buscador/filtro de tareas — todo verificado junto por primera vez, ver
-sección 7quinquies).
+Última actualización: 2026-09-16 (cierre del plan `recuperacion-password`: recuperación de
+contraseña por email con código de un solo uso, invalidación de sesión vía `token_version`,
+nuevo módulo `feature:passwordreset` con dos pantallas y enlace desde el login — verificado
+de extremo a extremo a mano en el emulador contra el servidor real, ver sección 7sexies).
 
 ## 0. Resumen en una frase
 
 App de agenda/tareas con rachas (KMP: Android + iOS futuro) + backend propio en Ktor con
-usuarios, login JWT, tareas completas con todos sus campos editables desde la UI, borrado
-conjunto, tiempo real por WebSocket, ajustes de cuenta, buscador/filtro de tareas y
-recordatorios push reales (Firebase). Offline-first de verdad (Room como SSOT + tombstones
-de borrado), validación y rate limiting en el servidor, logging centralizado con Napier,
-CI en GitHub Actions, **repo git inicializado**, y **214 tests automáticos en verde**
-(196 unitarios + 18 instrumentados de Compose UI en el emulador). Todo verificado en
-caliente en el emulador Android contra el servidor real, no solo compilado.
+usuarios, login JWT, recuperación de contraseña por email (código de un solo uso), tareas
+completas con todos sus campos editables desde la UI, borrado conjunto, tiempo real por
+WebSocket, ajustes de cuenta, buscador/filtro de tareas y recordatorios push reales
+(Firebase). Offline-first de verdad (Room como SSOT + tombstones de borrado), validación y
+rate limiting en el servidor, logging centralizado con Napier, CI en GitHub Actions,
+**repo git inicializado**, y **245 tests automáticos en verde** (226 unitarios + 19
+instrumentados de Compose UI en el emulador). Todo verificado en caliente en el emulador
+Android contra el servidor real, no solo compilado.
 
 ## 1. Arrancar todo (lo primero que querrás hacer)
 
@@ -44,9 +44,9 @@ Cuenta de pruebas que ya existe en la base de datos local del servidor:
 **`e2e@test.com` / `secreta123`**. Si borras `server/data/`, se regenera vacía y hay que
 registrarse de nuevo desde la app.
 
-Tests: `./gradlew check` (compila todo + ktlint + detekt + lint + los 144 tests unitarios).
+Tests: `./gradlew check` (compila todo + ktlint + detekt + lint + los 226 tests unitarios).
 Tests de UI de Compose (necesitan el emulador arrancado, sección 6):
-`./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest`.
+`./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest :feature:calendar:connectedDebugAndroidTest`.
 
 ## 2. Estructura de módulos
 
@@ -144,6 +144,8 @@ desarrollo hardcodeado, ver `Application.kt`).
 | POST | `/auth/register` | no | `{name,email,password}` -> `AuthResponse` (201) |
 | POST | `/auth/login` | no | `{email,password}` -> `AuthResponse` |
 | POST | `/auth/refresh` | no | `{refreshToken}` -> par de tokens nuevo |
+| POST | `/auth/forgot-password` | no | `{email}` -> 204 siempre (exista o no la cuenta, ver sección 7sexies). Genera un código de 6 dígitos y lo manda por email |
+| POST | `/auth/reset-password` | no | `{email,code,newPassword}` -> 204, o 400 si el código es inválido/caducado/ya usado 5 veces |
 | GET | `/users/me` | sí | `UserResponse` (lo usa el arranque para recuperar sesión) |
 | DELETE | `/users/me` | sí | Borra cuenta + tareas en cascada (204) |
 | GET | `/tasks` | sí | Todas las tareas del usuario |
@@ -214,24 +216,25 @@ fuente de verdad; la UI nunca espera a la red.
 **Errores legibles**: el cliente usa `expectSuccess = true` y `apiCall {}` traduce cualquier
 4xx/5xx a `ApiException(statusCode, message)` con el `message` que manda el servidor.
 
-## 6. Tests (214 automáticos, todos en verde)
+## 6. Tests (245 automáticos, todos en verde)
 
-`./gradlew check` ejecuta los 196 unitarios (+ktlint+detekt+lint). Los 18 instrumentados de
+`./gradlew check` ejecuta los 226 unitarios (+ktlint+detekt+lint). Los 19 instrumentados de
 Compose necesitan el emulador arrancado (ver sección 1).
 
 | Módulo | Tests | Qué cubre |
 |---|---|---|
 | `:core:common` | 2 | `AgendaLogger` (envoltorio de Napier usado en los fallos silenciosos de sync y de registro del token FCM) |
-| `:core:domain` | 29 | casos de uso con Fake Repositories, defaults del modelo, borrado conjunto, `GenerateTaskRepetitionsUseCase` (fechas, ids, campos copiados, casos sin incremento), `RegisterFcmTokenUseCase` |
+| `:core:domain` | 31 | casos de uso con Fake Repositories, defaults del modelo, borrado conjunto, `GenerateTaskRepetitionsUseCase` (fechas, ids, campos copiados, casos sin incremento), `RegisterFcmTokenUseCase`, **`RequestPasswordResetUseCase` y `ResetPasswordUseCase`** |
 | `:core:data` | 49 | mapeos, repositorio offline-first **con tombstones**, login/sesión, refresco de token, **periodo de gracia de rachas** |
-| `:feature:login` | 8 unit + 6 UI | reductor MVI (incluye **registrar el token FCM tras un login correcto, y no llamar al servidor si no hay token disponible**) + **Compose: campos, error, login OK/fallido, navegación** |
+| `:feature:login` | 9 unit + 7 UI | reductor MVI (incluye **registrar el token FCM tras un login correcto, y no llamar al servidor si no hay token disponible**) + **Compose: campos, error, login OK/fallido, navegación, y `pulsarOlvidasteTuContrasenaNavegaAlFormularioDeRecuperacion`** |
 | `:feature:register` | 5 | reductor MVI de registro |
 | `:feature:tasks` | 26 unit + 8 UI | reductor MVI (formulario completo, selección múltiple, **crear tarea incremental genera sus copias, editar una existente no las regenera**, **buscador por título y filtro por categoría, `SelectAll` respeta el filtro activo**) + **Compose: estado vacío, crear tarea, validación, fecha inicial desde el calendario, el formulario es deslizable al activar "incremental", escribir en el buscador oculta las tareas que no coinciden** |
 | `:feature:calendar` | 7 unit + 4 UI | reductor MVI de calendario (incluye conteo de tareas por día) + `CalendarLayoutTest` (tamaño de celda cuadrado dinámico, función pura) + **Compose: la cuadrícula no superpone días, tocar un día concreto selecciona ese día y no otro, un día con tareas muestra cuántas tiene, los botones de navegación de mes tienen descripción accesible** |
 | `:feature:streaks` | 3 | reductor MVI de rachas |
 | `:feature:settings` | 6 | logout, borrar cuenta (éxito y fallo del servidor) |
+| `:feature:passwordreset` | 9 | **nuevo módulo**: reductor MVI de `ForgotPasswordViewModel` (4: guarda el email escrito, no llama al servidor con email vacío, éxito dispara `CodeSent`, error del servidor se muestra) y de `ResetPasswordViewModel` (5: código que no tiene 6 dígitos no llama al servidor, contraseñas que no coinciden no resetean, éxito dispara `PasswordReset`, código inválido del servidor se muestra, el email llega fijo por parámetro sin formulario propio) |
 | `:shared` | 7 | `HomeNavigator` (4: qué pestaña se ve y qué fecha queda pendiente al abrir un día del calendario) + `SplashSessionHandler` (3: **registra el token FCM también al recuperar sesión en el splash**) |
-| `:server` | 54 | API completa (incluida `/tasks/ws`), JWT y bcrypt, **validación de tareas y de email, rate limiting de `/auth`, `ReminderScheduler` (lógica pura de cuándo toca un recordatorio, 10), `ReminderJob` (bucle en segundo plano, 4), `PushSender` (Firebase, 2), `FcmTokenRoutes` (3)** |
+| `:server` | 72 | API completa (incluida `/tasks/ws`), JWT y bcrypt, validación de tareas y de email, rate limiting de `/auth`, `ReminderScheduler` (lógica pura de cuándo toca un recordatorio, 10), `ReminderJob` (bucle en segundo plano, 4), `PushSender` (Firebase, 2), `FcmTokenRoutes` (3), **`PasswordResetRoutesTest` (9: pedir código con email existente/inexistente siempre responde 204, resetear con código correcto permite loguearse con la contraseña nueva, código incorrecto/caducado/agotado tras 5 intentos se rechaza, pedir código dos veces invalida el primero, resetear invalida el refresh token anterior, contraseña nueva de menos de 6 caracteres se rechaza), `EmailSenderTest` (5: `SmtpEmailSender` con `runCatching` ante un host inalcanzable, `NoOpEmailSender`, `provideEmailSender` con credenciales completas/incompletas), `JwtConfigTest` ampliado con el claim `tv` de `token_version`, `AuthRoutesTest` ampliado con `/auth/refresh` rechazando un `token_version` desactualizado** |
 
 Comandos sueltos: `./gradlew :core:data:testDebugUnitTest`,
 `./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest :feature:calendar:connectedDebugAndroidTest`
@@ -480,6 +483,103 @@ Verificación de esta sesión:
   reales en esta sesión, así que los recordatorios push no se han podido probar de extremo
   a extremo contra un dispositivo real recibiendo una notificación real — solo la lógica
   (`ReminderScheduler`, `ReminderJob`, `PushSender`) con tests y compilación.
+
+## 7sexies. Verificado en caliente el 2026-09-16 (recuperación de contraseña por email)
+
+Task 8 (cierre) del plan `recuperacion-password`: primera vez que se verifica todo el trabajo
+de las Tasks 1-7 junto, no tarea a tarea como hasta ahora.
+
+- **Envío de correo con SMTP real + respaldo sin efecto** (`server/.../email/EmailSender.kt`):
+  `SmtpEmailSender` (Jakarta Mail/Angus Mail) manda el correo real si hay las cinco credenciales
+  SMTP completas; `provideEmailSender` cae a `NoOpEmailSender` si falta cualquiera de las
+  variables de entorno `AGENDA_SMTP_HOST`/`AGENDA_SMTP_PORT`/`AGENDA_SMTP_USERNAME`/
+  `AGENDA_SMTP_PASSWORD`/`AGENDA_SMTP_FROM` — mismo patrón de placeholder pendiente de
+  credenciales reales que `ProductionConfig` (sección 8) y `AGENDA_FIREBASE_SERVICE_ACCOUNT_JSON`
+  (sección 7quinquies). `NoOpEmailSender` deja el cuerpo completo del correo (incluido el
+  código) en el log del servidor a nivel WARN, para poder probar el flujo entero en desarrollo
+  sin credenciales reales — así se ha probado a mano en esta sesión (ver más abajo).
+- **Invalidación de sesión por `token_version`** (`Users.token_version`,
+  `UserRepository.updatePassword`): cambiar la contraseña sube el `token_version` del usuario
+  en 1; el claim `tv` viaja en el access y el refresh token (`JwtConfig`), y `handleRefresh` en
+  `AuthRoutes.kt` compara el `tv` del refresh token contra el de la base de datos,
+  rechazándolo con 401 si no coincide. **Matiz importante para no sobrevalorar el mecanismo**:
+  esto invalida los *refresh tokens* emitidos antes del cambio, no los *access tokens* ya
+  emitidos, que (con su expiración de 30 minutos, sección 4) siguen siendo válidos hasta que
+  caduquen por sí solos — `auth-jwt` (`Application.kt`) valida solo la firma/caducidad del JWT,
+  no consulta el `token_version` en cada petición. Un access token robado sigue teniendo hasta
+  30 minutos de ventana tras el cambio de contraseña; cerrar esa ventana necesitaría comprobar
+  `token_version` en cada petición autenticada (una consulta extra a base de datos por
+  request), fuera del alcance de este plan.
+- **Dos rutas nuevas** (`server/.../routes/AuthRoutes.kt`, dentro del mismo `rateLimit("auth")`
+  que `/auth/login`/`/auth/register`, ver secciones 4 y 10 punto 10): `POST /auth/forgot-password`
+  responde 204 **siempre**, exista o no la cuenta con ese email, para no filtrar qué emails
+  están registrados; el envío real del correo se lanza en `GlobalScope.launch(dispatcher)`
+  (dispatcher inyectable con valor por defecto `Dispatchers.IO`, sin esperarse dentro de la
+  petición) precisamente para que la rama "email no existe" (que solo hace una consulta rápida)
+  no tarde perceptiblemente menos que la rama "email existe y manda el correo" — si no, la
+  diferencia de latencia sería un canal lateral por temporización que permitiría enumerar
+  cuentas registradas. `POST /auth/reset-password` valida el código (comparando su hash
+  SHA-256, nunca el código en claro), su caducidad (15 minutos) y un tope de 5 intentos
+  fallidos antes de invalidarlo.
+- **Cliente**: `AuthApi`/`AuthDtos` (`core/network`) y `AuthRepositoryImpl.requestPasswordReset`/
+  `.resetPassword` (`core/data`) + `RequestPasswordResetUseCase`/`ResetPasswordUseCase`
+  (`core/domain`, 1 test cada uno). **Nuevo módulo Gradle `feature/passwordreset`** (con su
+  propio `commonTest`, ver sección 6) con dos pantallas MVI: `ForgotPasswordScreen`
+  (email -> código) y `ResetPasswordScreen` (código + contraseña nueva -> confirmación),
+  conectadas en `shared/.../App.kt` (`AppScreen.ForgotPassword`/`.ResetPassword`).
+- **Enlace desde el login**: `LoginScreen` gana el texto "Olvidaste tu contrasena?" bajo
+  "Crear una cuenta"; pulsarlo navega a `ForgotPasswordScreen`. Cubierto por el test
+  instrumentado nuevo `pulsarOlvidasteTuContrasenaNavegaAlFormularioDeRecuperacion`
+  (`feature:login`), corrido de verdad en el emulador por primera vez esta sesión.
+
+Verificación de esta sesión:
+
+- `./gradlew check` -> **FAILED** en el primer intento: `:server:detektMain` con 6 issues
+  ponderados en código de la Task 1 de este plan (el commit con el informe de éxito fabricado
+  que el brief de esta Task 8 avisó de antemano) — `GlobalScope.launch(Dispatchers.IO)` fijo en
+  `AuthRoutes.handleForgotPassword` (detekt `InjectDispatcher`) y
+  `SmtpEmailSender(host!!, port!!, username!!, password!!, from!!)` con cinco `!!` seguidos en
+  `EmailSender.provideEmailSender` (detekt `UnsafeCallOnNullableType`). Arreglado:
+  `handleForgotPassword` gana un parámetro `dispatcher: CoroutineDispatcher = Dispatchers.IO`
+  (mismo patrón que `startReminderLoop` en `Application.kt`, sección 7quinquies) en vez de
+  `Dispatchers.IO` fijo en el cuerpo; y `provideEmailSender` se reestructura en dos funciones
+  con como mucho tres condiciones `&&` por `if` (para no chocar con detekt `ComplexCondition`)
+  que dejan que el compilador haga smart-cast real de las variables, sin ningún `!!`. Repetido
+  -> **BUILD SUCCESSFUL**.
+- `./gradlew check` (verde) -> **226 tests unitarios** (antes 196) + ktlint + detekt + lint,
+  todos los módulos, incluido el nuevo `:feature:passwordreset` (9) y `:server` con 18 tests
+  más (72, antes 54: ver sección 6 para el detalle).
+- `./gradlew :server:test` -> confirmado sin regresión de comportamiento tras el arreglo de
+  detekt (mismos 72 tests, todos en verde).
+- Emulador Pixel_6a (`emulator-5554`, confirmado con `adb devices` antes de empezar) +
+  `./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest :feature:calendar:connectedDebugAndroidTest`
+  -> **19/19 en verde** (antes 18): login 7/7 (incluida
+  `pulsarOlvidasteTuContrasenaNavegaAlFormularioDeRecuperacion`, primera vez en un dispositivo
+  real), tasks 8/8, calendar 4/4. 0 fallos, 0 saltados.
+- Flujo completo probado a mano en el emulador Pixel_6a contra el servidor real (sin
+  credenciales SMTP configuradas, así que el "correo" solo aparece en el log del servidor vía
+  `NoOpEmailSender`): cuenta `e2e@test.com`/`secreta123` registrada de nuevo desde la app (la
+  base de datos del servidor no la tenía todavía en esta sesión) -> cerrar sesión -> pulsar
+  "Olvidaste tu contrasena?" desde el login -> pedir el código para `e2e@test.com` -> leído el
+  código de 6 dígitos en el log del servidor (`745699`, WARN de `NoOpEmailSender`) -> escrito
+  junto a una contraseña nueva en `ResetPasswordScreen` -> `POST /auth/reset-password` -> 204
+  No Content -> vuelta automática al login con el aviso "Contrasena actualizada, inicia
+  sesion" -> login con la contraseña nueva -> `POST /auth/login` -> 200 OK, sesión abierta
+  normalmente (`GET /tasks` -> 200 OK). Capturas de pantalla tomadas en cada paso con
+  `adb shell screencap`.
+  - Nota de esta sesión: el emulador se cayó a mitad de la verificación manual (el proceso del
+    emulador desapareció sin más) y al reiniciarlo cargó el snapshot `default_boot`, que
+    revirtió el disco a un estado anterior sin el APK recién instalado — se detectó porque el
+    enlace "Olvidaste tu contrasena?" había desaparecido del login, y se resolvió con un
+    segundo `./gradlew :androidApp:installDebug` sobre el emulador ya arrancado. El servidor
+    (proceso aparte) no se vio afectado y mantuvo la cuenta y el código generados.
+- Placeholders pendientes de credenciales reales, igual que `ProductionConfig` (sección 8) y
+  `AGENDA_FIREBASE_SERVICE_ACCOUNT_JSON` (sección 7quinquies): `AGENDA_SMTP_HOST`,
+  `AGENDA_SMTP_PORT`, `AGENDA_SMTP_USERNAME`, `AGENDA_SMTP_PASSWORD` y `AGENDA_SMTP_FROM`
+  (variables de entorno del servidor; sin las cinco completas cae a `NoOpEmailSender`). No se
+  han rellenado con credenciales reales en esta sesión, así que el envío real por SMTP
+  (`SmtpEmailSender`) no se ha probado contra un servidor SMTP de verdad — solo la lógica con
+  tests (`EmailSenderTest`) y el flujo completo con `NoOpEmailSender` en desarrollo.
 
 ## 8. Producción: URL y certificate pinning (infraestructura lista, sin dominio real)
 
