@@ -552,6 +552,36 @@ Code con las tareas de arriba.
    credenciales reales**: sin un proyecto Firebase real, los recordatorios push funcionan
    solo hasta donde llega `NoOpPushSender`/la lógica probada con tests (ver sección
    7quinquies); nunca se ha mandado una notificación real a un dispositivo.
+7. **El token FCM no se borra al hacer logout**: `AuthRepositoryImpl.logout()` limpia los
+   tokens de sesión y Room, pero no llama a ningún `DELETE /users/me/fcm-token` (no existe
+   esa ruta) ni borra la fila de `FcmTokens`. Como `FcmTokens` tiene `PrimaryKey(userId,
+   token)`, el mismo token de dispositivo puede quedar asociado a más de un usuario a la vez;
+   si en el mismo dispositivo el usuario A cierra sesión y el usuario B inicia sesión,
+   `ReminderJob` seguiría mandando también los recordatorios de A a ese dispositivo. Hoy no es
+   explotable (sin credenciales Firebase reales ni permiso `POST_NOTIFICATIONS` concedido, el
+   push no llega a ningún sitio), pero hay que cerrarlo antes de activar push de verdad:
+   añadir la ruta de borrado + repositorio y llamarla desde `logout()`.
+8. **Regresión visual en el calendario: la última semana del mes queda centrada en vez de
+   alineada por columnas**. `CalendarScreen.kt`'s `MonthGrid` usa
+   `Arrangement.Center` en el `Row` de cada semana; como `weeks` solo rellena huecos al
+   principio del mes (no al final), la última semana (con menos de 7 días) se centra en vez
+   de quedarse alineada bajo sus columnas de día de la semana. Viene de la revisión de
+   cuadrícula cuadrada de la sesión 5 (sección 7ter) — antes de eso el `Row` no centraba.
+   Solo estético (no afecta a qué día se pulsa), pero visible. Arreglo sugerido: rellenar
+   también el final de la última semana con `null`s hasta 7 elementos.
+9. **`ReminderScheduler` (servidor) trata todas las fechas/horas de tarea como UTC**: no hay
+   ningún campo de zona horaria en `Task`/`Tasks`, así que un recordatorio puesto a las 09:00
+   por un usuario en España puede dispararse una o dos horas más tarde/temprano en hora local
+   según la época del año. Corregirlo de verdad necesita añadir un campo de zona horaria a la
+   tarea (tocaría los cuatro sitios de la sección 3), fuera del alcance de lo hecho hasta
+   ahora — hay que tenerlo en cuenta antes de dar por fiable la hora de un recordatorio push
+   real.
+10. **El rate limiting de `/auth/*` filtra por `call.request.origin.remoteHost`**: correcto
+    mientras el servidor no esté detrás de un proxy inverso; si en el futuro se despliega
+    detrás de nginx/Cloudflare/similar sin más cambios, todas las peticiones verían la IP del
+    proxy como origen y compartirían el mismo cupo de 10 peticiones/60s — hay que añadir
+    entonces soporte de `X-Forwarded-For` con una lista de proxies de confianza (nunca
+    confiar en esa cabecera sin verificar quién la manda).
 
 (El punto "editar una tarea desde el calendario" que estaba aquí se resolvió en la sesión
 5, ver sección 7bis.)
