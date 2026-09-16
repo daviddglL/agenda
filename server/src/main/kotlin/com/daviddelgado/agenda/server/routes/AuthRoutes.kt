@@ -23,6 +23,10 @@ import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.security.SecureRandom
 import java.time.Instant
 
@@ -128,8 +132,21 @@ private suspend fun handleRefresh(
 
 /**
  * Siempre responde 204, exista o no la cuenta con ese email: no revela que emails estan
- * registrados (ver Global Constraints del plan).
+ * registrados (ver Global Constraints del plan). Por eso mismo el envio del correo
+ * ([emailSender].send) se lanza en segundo plano ([GlobalScope], igual que
+ * `startReminderLoop()` en `Application.kt`, mismo razonamiento: es I/O bloqueante, no
+ * trabajo de CPU, de ahi `Dispatchers.IO`) en vez de esperarse dentro de la peticion: un
+ * envio SMTP real tarda del orden de cientos de ms (hasta el timeout de varios segundos
+ * configurado en `SmtpEmailSender`), mientras que la rama "email no existe" solo hace una
+ * consulta a base de datos que falla al momento. Si se esperase el envio, esa diferencia de
+ * latencia seria un canal lateral por temporizacion: un atacante podria enumerar que emails
+ * estan registrados midiendo cuanto tarda la respuesta, aunque el codigo de estado y el
+ * cuerpo sean siempre identicos. Lo que si se hace de forma sincrona, antes de responder, es
+ * generar el codigo y guardarlo (`passwordResetRepository.createOrReplace`): eso es trabajo
+ * local rapido y tiene que estar hecho ya cuando el cliente reciba el 204, para que una
+ * llamada a `/auth/reset-password` inmediatamente despues encuentre el codigo.
  */
+@OptIn(DelicateCoroutinesApi::class)
 private suspend fun handleForgotPassword(
     call: ApplicationCall,
     userRepository: UserRepository,
@@ -146,13 +163,15 @@ private suspend fun handleForgotPassword(
             codeHash = sha256Hex(code),
             expiresAt = Instant.now().plusSeconds(RESET_CODE_EXPIRY_MINUTES * 60),
         )
-        emailSender.send(
-            to = user.email,
-            subject = "Recupera tu contrasena en Agenda",
-            body =
-                "Tu codigo para restablecer la contrasena es: $code\n\n" +
-                    "Caduca en 15 minutos. Si no lo has pedido tu, ignora este correo.",
-        )
+        GlobalScope.launch(Dispatchers.IO) {
+            emailSender.send(
+                to = user.email,
+                subject = "Recupera tu contrasena en Agenda",
+                body =
+                    "Tu codigo para restablecer la contrasena es: $code\n\n" +
+                        "Caduca en 15 minutos. Si no lo has pedido tu, ignora este correo.",
+            )
+        }
     }
     call.respond(HttpStatusCode.NoContent)
 }

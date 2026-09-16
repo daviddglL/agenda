@@ -13,12 +13,26 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import java.time.Instant
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
+private const val ESPERA_ENVIO_CORREO_SEGUNDOS = 2L
+
+/**
+ * `handleForgotPassword` (AuthRoutes.kt) lanza el envio real en segundo plano
+ * (`GlobalScope.launch(Dispatchers.IO)`) para que la respuesta 204 no tarde mas cuando el
+ * email si existe que cuando no (cerrar ese canal lateral de temporizacion es justo el
+ * motivo del fondo asincrono). Por eso `send` aqui no es sincrono con la respuesta HTTP:
+ * este sender usa un `CountDownLatch` para que el test pueda esperar de forma determinista a
+ * que la corutina de fondo haya terminado antes de leer `lastBody`, en vez de asumir que ya
+ * ha corrido (seria una carrera) o meter un `Thread.sleep` a ciegas.
+ */
 private class CapturingEmailSender : EmailSender {
     var lastBody: String? = null
+    private val enviado = CountDownLatch(1)
 
     override fun send(
         to: String,
@@ -26,11 +40,19 @@ private class CapturingEmailSender : EmailSender {
         body: String,
     ): Boolean {
         lastBody = body
+        enviado.countDown()
         return true
+    }
+
+    fun esperarEnvio() {
+        check(enviado.await(ESPERA_ENVIO_CORREO_SEGUNDOS, TimeUnit.SECONDS)) {
+            "El correo no se mando en el tiempo de espera"
+        }
     }
 }
 
 private fun CapturingEmailSender.codigoEnviado(): String {
+    esperarEnvio()
     val cuerpo = assertNotNull(lastBody, "No se envio ningun correo")
     return Regex("[0-9]{6}").find(cuerpo)!!.value
 }
