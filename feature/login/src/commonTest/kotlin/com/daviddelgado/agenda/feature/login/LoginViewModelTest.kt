@@ -57,6 +57,14 @@ private class FakeAuthRepository(private val error: Throwable? = null) : AuthRep
         tokenRegistrado = token
         return Result.success(Unit)
     }
+
+    override suspend fun requestPasswordReset(email: String): Result<Unit> = Result.success(Unit)
+
+    override suspend fun resetPassword(
+        email: String,
+        code: String,
+        newPassword: String,
+    ): Result<Unit> = Result.success(Unit)
 }
 
 /** FcmTokenProvider falso: evita depender de Firebase real en los tests (Task 10). */

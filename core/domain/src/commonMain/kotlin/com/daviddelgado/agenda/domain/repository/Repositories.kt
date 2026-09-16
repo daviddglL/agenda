@@ -72,4 +72,14 @@ interface AuthRepository {
 
     /** Manda al servidor el token FCM de este dispositivo para poder recibir recordatorios push. */
     suspend fun registerFcmToken(token: String): Result<Unit>
+
+    /** Pide al servidor un codigo de recuperacion de contrasena para este email (si existe la cuenta). */
+    suspend fun requestPasswordReset(email: String): Result<Unit>
+
+    /** Cambia la contrasena usando el codigo recibido por email. */
+    suspend fun resetPassword(
+        email: String,
+        code: String,
+        newPassword: String,
+    ): Result<Unit>
 }

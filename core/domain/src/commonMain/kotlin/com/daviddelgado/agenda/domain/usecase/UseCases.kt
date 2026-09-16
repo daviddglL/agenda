@@ -123,3 +123,17 @@ class DeleteAccountUseCase(private val repository: AuthRepository) {
 class RegisterFcmTokenUseCase(private val repository: AuthRepository) {
     suspend operator fun invoke(token: String): Result<Unit> = repository.registerFcmToken(token)
 }
+
+/** Pide al servidor un codigo de recuperacion de contrasena para este email (si existe la cuenta). */
+class RequestPasswordResetUseCase(private val repository: AuthRepository) {
+    suspend operator fun invoke(email: String): Result<Unit> = repository.requestPasswordReset(email)
+}
+
+/** Cambia la contrasena usando el codigo recibido por email. */
+class ResetPasswordUseCase(private val repository: AuthRepository) {
+    suspend operator fun invoke(
+        email: String,
+        code: String,
+        newPassword: String,
+    ): Result<Unit> = repository.resetPassword(email, code, newPassword)
+}

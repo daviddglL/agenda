@@ -15,6 +15,14 @@ data class RefreshRequest(val refreshToken: String)
 @Serializable
 data class FcmTokenRequest(val token: String)
 
+/** Cuerpo de `POST /auth/forgot-password` (ver `ForgotPasswordRequest` del modulo :server). */
+@Serializable
+data class ForgotPasswordRequest(val email: String)
+
+/** Cuerpo de `POST /auth/reset-password` (ver `ResetPasswordRequest` del modulo :server). */
+@Serializable
+data class ResetPasswordRequest(val email: String, val code: String, val newPassword: String)
+
 @Serializable
 data class AuthResponse(
     val userId: String,

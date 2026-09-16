@@ -16,6 +16,9 @@ class FakeAuthRepository(
     var accountDeleted = false
         private set
     var tokenRegistrado: String? = null
+    var passwordResetRequestedFor: String? = null
+    var passwordWasReset = false
+        private set
 
     override fun observeCurrentUser(): Flow<User?> = current
 
@@ -46,6 +49,21 @@ class FakeAuthRepository(
 
     override suspend fun registerFcmToken(token: String): Result<Unit> {
         tokenRegistrado = token
+        return Result.success(Unit)
+    }
+
+    override suspend fun requestPasswordReset(email: String): Result<Unit> {
+        passwordResetRequestedFor = email
+        return Result.success(Unit)
+    }
+
+    override suspend fun resetPassword(
+        email: String,
+        code: String,
+        newPassword: String,
+    ): Result<Unit> {
+        failWith?.let { return Result.failure(it) }
+        passwordWasReset = true
         return Result.success(Unit)
     }
 

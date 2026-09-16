@@ -13,6 +13,8 @@ import com.daviddelgado.agenda.domain.usecase.ObserveTaskChangesUseCase
 import com.daviddelgado.agenda.domain.usecase.ObserveTasksUseCase
 import com.daviddelgado.agenda.domain.usecase.RegisterFcmTokenUseCase
 import com.daviddelgado.agenda.domain.usecase.RegisterUseCase
+import com.daviddelgado.agenda.domain.usecase.RequestPasswordResetUseCase
+import com.daviddelgado.agenda.domain.usecase.ResetPasswordUseCase
 import com.daviddelgado.agenda.domain.usecase.RestoreSessionUseCase
 import com.daviddelgado.agenda.domain.usecase.SyncTasksUseCase
 import com.daviddelgado.agenda.domain.usecase.ToggleTaskCompletionUseCase
@@ -35,6 +37,8 @@ val domainModule =
         factory { RegisterUseCase(get()) }
         factory { DeleteAccountUseCase(get()) }
         factory { RegisterFcmTokenUseCase(get()) }
+        factory { RequestPasswordResetUseCase(get()) }
+        factory { ResetPasswordUseCase(get()) }
         factory { RestoreSessionUseCase(get()) }
         factory { LogoutUseCase(get()) }
         factory { ObserveCurrentUserUseCase(get()) }

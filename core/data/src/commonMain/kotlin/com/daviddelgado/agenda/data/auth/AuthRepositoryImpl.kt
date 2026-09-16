@@ -64,6 +64,23 @@ class AuthRepositoryImpl(
 
     override suspend fun registerFcmToken(token: String): Result<Unit> = runCatching { authApi.registerFcmToken(token) }
 
+    override suspend fun requestPasswordReset(email: String): Result<Unit> =
+        runCatching { authApi.forgotPassword(email) }
+
+    override suspend fun resetPassword(
+        email: String,
+        code: String,
+        newPassword: String,
+    ): Result<Unit> =
+        runCatching {
+            authApi.resetPassword(email, code, newPassword)
+            // El reset ya invalido la sesion en el servidor (sube token_version): no tiene
+            // sentido conservar tokens locales que van a dejar de servir.
+            tokenProvider.clear()
+            authApi.forgetCachedTokens()
+            currentUser.value = null
+        }
+
     private suspend fun clearLocalData() {
         taskDao.deleteAll()
         pendingDeletionDao.deleteAll()

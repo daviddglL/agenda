@@ -3,8 +3,10 @@ package com.daviddelgado.agenda.network.api
 import com.daviddelgado.agenda.network.apiCall
 import com.daviddelgado.agenda.network.dto.AuthResponse
 import com.daviddelgado.agenda.network.dto.FcmTokenRequest
+import com.daviddelgado.agenda.network.dto.ForgotPasswordRequest
 import com.daviddelgado.agenda.network.dto.LoginRequest
 import com.daviddelgado.agenda.network.dto.RegisterRequest
+import com.daviddelgado.agenda.network.dto.ResetPasswordRequest
 import com.daviddelgado.agenda.network.dto.UserResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -55,6 +57,28 @@ class AuthApi(private val client: HttpClient) {
             client.post("users/me/fcm-token") {
                 contentType(ContentType.Application.Json)
                 setBody(FcmTokenRequest(token))
+            }
+        }
+    }
+
+    suspend fun forgotPassword(email: String) {
+        apiCall {
+            client.post("auth/forgot-password") {
+                contentType(ContentType.Application.Json)
+                setBody(ForgotPasswordRequest(email))
+            }
+        }
+    }
+
+    suspend fun resetPassword(
+        email: String,
+        code: String,
+        newPassword: String,
+    ) {
+        apiCall {
+            client.post("auth/reset-password") {
+                contentType(ContentType.Application.Json)
+                setBody(ResetPasswordRequest(email, code, newPassword))
             }
         }
     }
