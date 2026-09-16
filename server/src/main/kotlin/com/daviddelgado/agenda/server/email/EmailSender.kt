@@ -113,13 +113,28 @@ fun provideEmailSender(
     username: String?,
     password: String?,
     from: String?,
-): EmailSender {
-    val credenciales = listOfNotNull(host, port, username, password, from)
-    return if (credenciales.size == CREDENCIALES_SMTP_REQUERIDAS) {
-        SmtpEmailSender(host!!, port!!, username!!, password!!, from!!)
+): EmailSender =
+    if (host != null && port != null && username != null) {
+        provideSmtpEmailSenderOrNoOp(host, port, username, password, from)
     } else {
         NoOpEmailSender
     }
-}
 
-private const val CREDENCIALES_SMTP_REQUERIDAS = 5
+/**
+ * Separada de [provideEmailSender] solo para que ningun `if` tenga mas de 3 condiciones
+ * encadenadas con `&&` (regla detekt `ComplexCondition`) sin volver a caer en `!!` sobre
+ * variables nullable (regla detekt `UnsafeCallOnNullableType`, ver historial de esta funcion):
+ * cada `if` deja que el compilador haga smart-cast de verdad de sus propias variables.
+ */
+private fun provideSmtpEmailSenderOrNoOp(
+    host: String,
+    port: Int,
+    username: String,
+    password: String?,
+    from: String?,
+): EmailSender =
+    if (password != null && from != null) {
+        SmtpEmailSender(host, port, username, password, from)
+    } else {
+        NoOpEmailSender
+    }

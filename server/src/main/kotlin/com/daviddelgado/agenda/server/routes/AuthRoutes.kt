@@ -23,6 +23,7 @@ import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -145,6 +146,10 @@ private suspend fun handleRefresh(
  * generar el codigo y guardarlo (`passwordResetRepository.createOrReplace`): eso es trabajo
  * local rapido y tiene que estar hecho ya cuando el cliente reciba el 204, para que una
  * llamada a `/auth/reset-password` inmediatamente despues encuentre el codigo.
+ *
+ * `dispatcher` es un parametro con valor por defecto (regla detekt `InjectDispatcher`, mismo
+ * patron que `startReminderLoop()` en `Application.kt`) en vez de un `Dispatchers.IO` fijo en
+ * el cuerpo de la funcion.
  */
 @OptIn(DelicateCoroutinesApi::class)
 private suspend fun handleForgotPassword(
@@ -152,6 +157,7 @@ private suspend fun handleForgotPassword(
     userRepository: UserRepository,
     passwordResetRepository: PasswordResetRepository,
     emailSender: EmailSender,
+    dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
     val request = call.receive<ForgotPasswordRequest>()
     val user = userRepository.findByEmail(request.email)
@@ -163,7 +169,7 @@ private suspend fun handleForgotPassword(
             codeHash = sha256Hex(code),
             expiresAt = Instant.now().plusSeconds(RESET_CODE_EXPIRY_MINUTES * 60),
         )
-        GlobalScope.launch(Dispatchers.IO) {
+        GlobalScope.launch(dispatcher) {
             emailSender.send(
                 to = user.email,
                 subject = "Recupera tu contrasena en Agenda",
