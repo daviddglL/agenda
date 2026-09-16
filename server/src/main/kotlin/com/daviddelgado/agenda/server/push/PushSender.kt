@@ -6,6 +6,7 @@ import com.google.firebase.FirebaseOptions
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.Message
 import com.google.firebase.messaging.Notification
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.FileInputStream
 
@@ -52,12 +53,12 @@ class FirebasePushSender(serviceAccountJsonPath: String) : PushSender {
         }.onFailure { logger.error("Fallo enviando push a $token", it) }.isSuccess
 
     private companion object {
-        val logger = LoggerFactory.getLogger(FirebasePushSender::class.java)
+        val logger: Logger = LoggerFactory.getLogger(FirebasePushSender::class.java)
     }
 }
 
 object NoOpPushSender : PushSender {
-    private val logger = LoggerFactory.getLogger(NoOpPushSender::class.java)
+    private val logger: Logger = LoggerFactory.getLogger(NoOpPushSender::class.java)
     private var avisado = false
 
     override fun send(

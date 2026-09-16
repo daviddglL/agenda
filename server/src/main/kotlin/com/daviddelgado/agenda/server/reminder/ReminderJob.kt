@@ -5,11 +5,12 @@ import com.daviddelgado.agenda.server.repository.FcmTokenRepository
 import com.daviddelgado.agenda.server.repository.TaskRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import kotlin.coroutines.coroutineContext
 
-private val logger = LoggerFactory.getLogger("ReminderJob")
+private val logger: Logger = LoggerFactory.getLogger("ReminderJob")
 
 /** Cada cuanto se revisa si hay recordatorios pendientes de enviar. */
 const val REMINDER_CHECK_INTERVAL_MILLIS = 60_000L

@@ -31,6 +31,7 @@ import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.respond
 import io.ktor.server.routing.routing
 import io.ktor.server.websocket.WebSockets
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -61,12 +62,13 @@ fun main() {
  * `Dispatchers.IO` (y no el `Default` que heredaria `GlobalScope` por defecto) porque el bucle
  * hace trabajo bloqueante de verdad: transacciones JDBC (`transaction {}`) y, por cada token,
  * una llamada HTTP sincrona a Firebase; `Default` esta pensado para trabajo de CPU, no para
- * bloquear hilos con I/O.
+ * bloquear hilos con I/O. `dispatcher` es un parametro con valor por defecto (regla detekt
+ * InjectDispatcher) en vez de un `Dispatchers.IO` fijo en el cuerpo de la funcion.
  */
 @OptIn(DelicateCoroutinesApi::class)
-private fun startReminderLoop() {
+private fun startReminderLoop(dispatcher: CoroutineDispatcher = Dispatchers.IO) {
     val pushSender = providePushSender(System.getenv("AGENDA_FIREBASE_SERVICE_ACCOUNT_JSON"))
-    GlobalScope.launch(Dispatchers.IO) {
+    GlobalScope.launch(dispatcher) {
         runReminderLoop(TaskRepository(), FcmTokenRepository(), pushSender)
     }
 }
