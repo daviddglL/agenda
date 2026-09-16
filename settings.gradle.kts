@@ -38,6 +38,7 @@ include(":core:data")
 
 include(":feature:login")
 include(":feature:register")
+include(":feature:passwordreset")
 include(":feature:calendar")
 include(":feature:tasks")
 include(":feature:streaks")
