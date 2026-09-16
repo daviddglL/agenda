@@ -5,18 +5,22 @@ decisiones ya tomadas para no repetir trabajo ni contradecirlas sin querer. La s
 técnica obligatoria (no negociable) sigue estando en [markdown.md](markdown.md); este
 documento es el "qué se ha hecho, qué falta y cómo se arranca" sobre esa base.
 
-Última actualización: 2026-09-14 (sesión 5, continuada otra vez: activar "incremental" al
-crear una tarea ahora genera de verdad copias adicionales de la tarea, repitiendo sus
-características básicas a intervalos regulares).
+Última actualización: 2026-09-16 (cierre del plan `calidad-seguridad-recordatorios`:
+logging con Napier, accesibilidad del calendario, CI en GitHub Actions, validación y rate
+limiting del servidor, recordatorios push reales con Firebase, registro del token FCM en el
+cliente Android y buscador/filtro de tareas — todo verificado junto por primera vez, ver
+sección 7quinquies).
 
 ## 0. Resumen en una frase
 
 App de agenda/tareas con rachas (KMP: Android + iOS futuro) + backend propio en Ktor con
 usuarios, login JWT, tareas completas con todos sus campos editables desde la UI, borrado
-conjunto, tiempo real por WebSocket y ajustes de cuenta. Offline-first de verdad (Room
-como SSOT + tombstones de borrado), **repo git inicializado**, y **176 tests automáticos
-en verde** (160 unitarios + 16 instrumentados de Compose UI en el emulador). Todo
-verificado en caliente en el emulador Android contra el servidor real, no solo compilado.
+conjunto, tiempo real por WebSocket, ajustes de cuenta, buscador/filtro de tareas y
+recordatorios push reales (Firebase). Offline-first de verdad (Room como SSOT + tombstones
+de borrado), validación y rate limiting en el servidor, logging centralizado con Napier,
+CI en GitHub Actions, **repo git inicializado**, y **214 tests automáticos en verde**
+(196 unitarios + 18 instrumentados de Compose UI en el emulador). Todo verificado en
+caliente en el emulador Android contra el servidor real, no solo compilado.
 
 ## 1. Arrancar todo (lo primero que querrás hacer)
 
@@ -210,23 +214,24 @@ fuente de verdad; la UI nunca espera a la red.
 **Errores legibles**: el cliente usa `expectSuccess = true` y `apiCall {}` traduce cualquier
 4xx/5xx a `ApiException(statusCode, message)` con el `message` que manda el servidor.
 
-## 6. Tests (176 automáticos, todos en verde)
+## 6. Tests (214 automáticos, todos en verde)
 
-`./gradlew check` ejecuta los 160 unitarios (+ktlint+detekt+lint). Los 16 instrumentados de
+`./gradlew check` ejecuta los 196 unitarios (+ktlint+detekt+lint). Los 18 instrumentados de
 Compose necesitan el emulador arrancado (ver sección 1).
 
 | Módulo | Tests | Qué cubre |
 |---|---|---|
-| `:core:domain` | 28 | casos de uso con Fake Repositories, defaults del modelo, borrado conjunto, `GenerateTaskRepetitionsUseCase` (fechas, ids, campos copiados, casos sin incremento) |
+| `:core:common` | 2 | `AgendaLogger` (envoltorio de Napier usado en los fallos silenciosos de sync y de registro del token FCM) |
+| `:core:domain` | 29 | casos de uso con Fake Repositories, defaults del modelo, borrado conjunto, `GenerateTaskRepetitionsUseCase` (fechas, ids, campos copiados, casos sin incremento), `RegisterFcmTokenUseCase` |
 | `:core:data` | 49 | mapeos, repositorio offline-first **con tombstones**, login/sesión, refresco de token, **periodo de gracia de rachas** |
-| `:feature:login` | 6 unit + 6 UI | reductor MVI + **Compose: campos, error, login OK/fallido, navegación** |
+| `:feature:login` | 8 unit + 6 UI | reductor MVI (incluye **registrar el token FCM tras un login correcto, y no llamar al servidor si no hay token disponible**) + **Compose: campos, error, login OK/fallido, navegación** |
 | `:feature:register` | 5 | reductor MVI de registro |
-| `:feature:tasks` | 22 unit + 7 UI | reductor MVI (formulario completo, selección múltiple, **crear tarea incremental genera sus copias, editar una existente no las regenera**) + **Compose: estado vacío, crear tarea, validación, fecha inicial desde el calendario, el formulario es deslizable al activar "incremental"** |
-| `:feature:calendar` | 7 unit + 3 UI | reductor MVI de calendario (incluye conteo de tareas por día) + `CalendarLayoutTest` (tamaño de celda cuadrado dinámico, función pura) + **Compose: la cuadrícula no superpone días, tocar un día concreto selecciona ese día y no otro, un día con tareas muestra cuántas tiene** |
+| `:feature:tasks` | 26 unit + 8 UI | reductor MVI (formulario completo, selección múltiple, **crear tarea incremental genera sus copias, editar una existente no las regenera**, **buscador por título y filtro por categoría, `SelectAll` respeta el filtro activo**) + **Compose: estado vacío, crear tarea, validación, fecha inicial desde el calendario, el formulario es deslizable al activar "incremental", escribir en el buscador oculta las tareas que no coinciden** |
+| `:feature:calendar` | 7 unit + 4 UI | reductor MVI de calendario (incluye conteo de tareas por día) + `CalendarLayoutTest` (tamaño de celda cuadrado dinámico, función pura) + **Compose: la cuadrícula no superpone días, tocar un día concreto selecciona ese día y no otro, un día con tareas muestra cuántas tiene, los botones de navegación de mes tienen descripción accesible** |
 | `:feature:streaks` | 3 | reductor MVI de rachas |
 | `:feature:settings` | 6 | logout, borrar cuenta (éxito y fallo del servidor) |
-| `:shared` | 4 | `HomeNavigator`: qué pestaña se ve y qué fecha queda pendiente al abrir un día del calendario |
-| `:server` | 30 | API completa (incluida `/tasks/ws`), JWT y bcrypt |
+| `:shared` | 7 | `HomeNavigator` (4: qué pestaña se ve y qué fecha queda pendiente al abrir un día del calendario) + `SplashSessionHandler` (3: **registra el token FCM también al recuperar sesión en el splash**) |
+| `:server` | 54 | API completa (incluida `/tasks/ws`), JWT y bcrypt, **validación de tareas y de email, rate limiting de `/auth`, `ReminderScheduler` (lógica pura de cuándo toca un recordatorio, 10), `ReminderJob` (bucle en segundo plano, 4), `PushSender` (Firebase, 2), `FcmTokenRoutes` (3)** |
 
 Comandos sueltos: `./gradlew :core:data:testDebugUnitTest`,
 `./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest :feature:calendar:connectedDebugAndroidTest`
@@ -369,6 +374,113 @@ Continuación de la misma sesión 5, tras pedir que "incremental" haga algo de v
   -> 16/16 en verde (sin cambios en la UI instrumentada, la generación de copias no se probó
   por Compose UI test, solo a nivel de `TasksViewModel` + a mano en el emulador).
 
+## 7quinquies. Verificado en caliente el 2026-09-16 (cierre del plan: logging, seguridad, recordatorios push, buscador)
+
+Task 12 (cierre) del plan `calidad-seguridad-recordatorios`: primera vez que se verifica
+todo el trabajo de las Tasks 1-11 junto, no tarea a tarea como hasta ahora.
+
+- **Logging centralizado con Napier** (`core/common/.../logging/AgendaLogger.kt`, con Napier
+  de verdad detrás): los fallos silenciosos de sincronización (`core/data`) y de registro
+  del token FCM (`feature/login`, `AgendaFirebaseMessagingService`) quedan en logcat con
+  nivel y excepción en vez de perderse en un `catch {}` mudo. 2 tests en `AgendaLoggerTest`.
+- **Accesibilidad del calendario**: los botones de navegación de mes de `CalendarScreen`
+  tienen `contentDescription`. Confirmado con el test instrumentado
+  `losBotonesDeNavegacionDelMesTienenDescripcionAccesible`, corrido de verdad en el
+  emulador esta sesión — nunca se había ejecutado en un dispositivo real hasta ahora.
+- **CI en GitHub Actions** (`.github/workflows/ci.yml`): job `check` en `ubuntu-latest`,
+  JDK 17, cache de `~/.gradle`, corre `./gradlew check --no-daemon` en cada push a `main` y
+  en cada PR. No se ha podido verificar la ejecución real en GitHub desde este entorno (no
+  hay push a un remoto), pero el mismo comando se ha corrido en local esta sesión (ver
+  abajo).
+- **Validación del servidor**: `TaskRoutes.kt` (`respondIfInvalid`, extraída aparte para no
+  romper el límite de detekt `LongMethod`) valida título/fecha/hora antes de guardar una
+  tarea y responde `400 Bad Request` con el motivo. `AuthRoutes.kt` valida el email con
+  `emailRegex = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")` (antes solo comprobaba que no
+  estuviera vacío) además de la longitud mínima de contraseña.
+- **Rate limiting** (`Application.kt`, plugin `RateLimit` de Ktor): 10 peticiones/60s en
+  `/auth/login` y `/auth/register`, con la clave del cubo por
+  `call.request.origin.remoteHost` (no un cubo global) para que un cliente agotando su
+  cupo no bloquee al resto.
+- **Recordatorios push reales**: `ReminderScheduler` (`server/.../reminder/`) es lógica pura
+  (10 tests) que decide si toca mandar el recordatorio de una tarea ahora mismo.
+  `ReminderJob.runReminderLoop` (4 tests) usa ese scheduler en un bucle en segundo plano
+  arrancado solo desde `main()` (nunca en los tests) con `GlobalScope.launch` sobre
+  `Dispatchers.IO`. El envío real usa `FirebasePushSender` (Firebase Admin SDK,
+  `server/.../push/PushSender.kt`, 2 tests) si `AGENDA_FIREBASE_SERVICE_ACCOUNT_JSON`
+  apunta a un JSON de cuenta de servicio válido; si no, cae a `NoOpPushSender` (avisa una
+  vez por log y la app sigue funcionando sin push de verdad) — el mismo patrón de
+  placeholder que `ProductionConfig` (sección 8). El endpoint `POST /fcm-token`
+  (`FcmTokenRoutesTest`, 3 tests) registra el token de cada dispositivo.
+- **Cliente Android recibe los push y registra su token FCM**:
+  `AgendaFirebaseMessagingService` (androidApp) registra el token nuevo en `onNewToken` y
+  muestra la notificación en `onMessageReceived`; el registro también se dispara tras un
+  login correcto (`LoginViewModel`, 2 tests: token registrado cuando hay uno disponible, y
+  no se llama al servidor si no lo hay) y al recuperar sesión desde el splash
+  (`SplashSessionHandlerTest`, 3 tests). Los fallos al registrar el token quedan en log.
+  - **Bugs reales encontrados y arreglados en esta sesión de cierre** (no en las Tasks 9/10
+    originales: sus revisiones no habían corrido el `./gradlew check` completo de
+    `androidApp`/`server`, solo compilación y tests unitarios sueltos):
+    - detekt `InjectDispatcher`: `CoroutineScope(Dispatchers.IO)` fijo en
+      `AgendaFirebaseMessagingService` y `GlobalScope.launch(Dispatchers.IO)` fijo en
+      `Application.startReminderLoop`. Arreglado pasando el dispatcher como parámetro con
+      valor por defecto (`Dispatchers.IO`) en los dos sitios: mismo comportamiento en
+      producción, permite inyectar uno de test.
+    - detekt `HasPlatformType`: los loggers de `PushSender.kt` (2) y `ReminderJob.kt` (1)
+      declarados como `LoggerFactory.getLogger(...)` sin tipo explícito — arreglado
+      añadiendo `: Logger` a los tres.
+    - detekt `UseOrEmpty`: `?: ""` en `AgendaFirebaseMessagingService` reemplazado por
+      `.orEmpty()`.
+    - Android Lint `MissingPermission`: `NotificationManagerCompat.from(this).notify(...)`
+      en `onMessageReceived` no comprobaba el permiso `POST_NOTIFICATIONS` (permiso
+      "dangerous" desde API 33) antes de llamarlo; Lint lo marca error porque `notify()`
+      puede lanzar `SecurityException` si el usuario lo deniega en tiempo de ejecución.
+      Arreglado con un check inline de `ContextCompat.checkSelfPermission(...)` antes de
+      `notify()` (tiene que ser inline y no en una función aparte, porque el análisis de
+      flujo de datos de Lint no sigue el check a través de una llamada a otro método); sin
+      permiso, el recordatorio se descarta con un aviso en log en vez de mostrarse o
+      crashear.
+    - **Gap real encontrado, no arreglado esta sesión** (construir el flujo de petición de
+      permiso es una decisión de UX/producto, no una verificación): el manifest declara
+      `POST_NOTIFICATIONS` pero la app nunca lo pide en tiempo de ejecución (no hay ningún
+      `ActivityResultContracts.RequestPermission` en el código). En Android 13+ el permiso
+      empieza denegado y se queda así hasta que el usuario lo conceda a mano desde Ajustes,
+      así que los recordatorios push no se van a ver en la práctica en esas versiones sin
+      ese flujo. Añadido a la sección 10.
+- **Buscador y filtro de tareas** (`feature/tasks`): campo de texto que filtra por título y
+  selector de categoría que filtra la lista visible; `SelectAll` respeta el filtro activo
+  (no selecciona tareas ocultas por él). Cubierto con TDD a nivel de `TasksViewModel` (4
+  tests) y con el test instrumentado `escribirEnElBuscadorOcultaLasTareasQueNoCoinciden`,
+  corrido de verdad en el emulador por primera vez esta sesión — en verde.
+
+Verificación de esta sesión:
+
+- `./gradlew check` -> **FAILED** en el primer intento: 2 issues de detekt en `androidApp`
+  (`InjectDispatcher`, `UseOrEmpty`, ambos en `AgendaFirebaseMessagingService`). Arreglados,
+  se repitió -> **FAILED** de nuevo: Android Lint `MissingPermission` en el mismo fichero.
+  Arreglado, se repitió -> **FAILED** una tercera vez: 2 issues de detekt más en `server`
+  (`InjectDispatcher` en `Application.kt`, `HasPlatformType` en `PushSender.kt` y
+  `ReminderJob.kt`, este último no lo había reportado el intento anterior). Arreglados
+  todos, cuarto intento -> **BUILD SUCCESSFUL**.
+- `./gradlew check` (verde) -> **196 tests unitarios** (antes 160) + ktlint + detekt + lint,
+  todos los módulos, incluidos `:core:common` (2, `AgendaLoggerTest`, nuevo) y `:server`
+  (54, antes 30: +24 de `ReminderSchedulerTest` (10), `ReminderJobTest` (4),
+  `PushSenderTest` (2), `FcmTokenRoutesTest` (3) y la validación/rate limiting ya cubiertas
+  dentro de `AuthRoutesTest`/`TaskRoutesTest`).
+- Emulador Pixel_6a (`emulator-5554`, ya arrancado, confirmado con `adb devices` antes de
+  empezar) + `./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest :feature:calendar:connectedDebugAndroidTest`
+  -> **18/18 en verde** (antes 16): login 6/6, calendar 4/4 (incluida
+  `losBotonesDeNavegacionDelMesTienenDescripcionAccesible`, Task 2, primera vez en un
+  dispositivo real), tasks 8/8 (incluida `escribirEnElBuscadorOcultaLasTareasQueNoCoinciden`,
+  Task 11, primera vez en un dispositivo real). 0 fallos, 0 saltados.
+- Placeholders pendientes de credenciales reales, igual que `ProductionConfig` (sección 8):
+  `AGENDA_FIREBASE_SERVICE_ACCOUNT_JSON` (variable de entorno del servidor; sin ella cae a
+  `NoOpPushSender`) y `androidApp/google-services.json` (contiene valores de relleno
+  explícitos como `"PLACEHOLDER_API_KEY_SUSTITUIR_CON_EL_REAL_DE_FIREBASE"` y
+  `"project_id": "agenda-placeholder"`). Ninguno de los dos se ha rellenado con credenciales
+  reales en esta sesión, así que los recordatorios push no se han podido probar de extremo
+  a extremo contra un dispositivo real recibiendo una notificación real — solo la lógica
+  (`ReminderScheduler`, `ReminderJob`, `PushSender`) con tests y compilación.
+
 ## 8. Producción: URL y certificate pinning (infraestructura lista, sin dominio real)
 
 No hay todavía un backend desplegado en un dominio real, así que no hay pines de
@@ -430,6 +542,16 @@ Code con las tareas de arriba.
 4. **Falta paginación/paginado en `GET /tasks`**: con muchísimas tareas el `syncTasks()`
    baja la lista entera cada vez; no es un problema con el volumen esperado de una app
    personal, pero no escalaría a un uso muy intensivo.
+5. **No se pide el permiso `POST_NOTIFICATIONS` en tiempo de ejecución**: el manifest lo
+   declara y `AgendaFirebaseMessagingService` comprueba si está concedido antes de mostrar
+   una notificación (ver sección 7quinquies), pero no hay ningún flujo en la app que lo
+   pida al usuario (`ActivityResultContracts.RequestPermission` o similar). En Android 13+
+   el permiso empieza denegado, así que los recordatorios push no se van a ver en la
+   práctica hasta que el usuario lo conceda a mano desde Ajustes del sistema.
+6. **`AGENDA_FIREBASE_SERVICE_ACCOUNT_JSON` y `androidApp/google-services.json` sin
+   credenciales reales**: sin un proyecto Firebase real, los recordatorios push funcionan
+   solo hasta donde llega `NoOpPushSender`/la lógica probada con tests (ver sección
+   7quinquies); nunca se ha mandado una notificación real a un dispositivo.
 
 (El punto "editar una tarea desde el calendario" que estaba aquí se resolvió en la sesión
 5, ver sección 7bis.)
