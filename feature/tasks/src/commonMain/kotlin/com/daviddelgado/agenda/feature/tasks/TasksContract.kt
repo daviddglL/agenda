@@ -35,8 +35,18 @@ data class TasksState(
     val selectedTaskIds: Set<String> = emptySet(),
     val taskPendingDelete: Task? = null,
     val isBulkDeletePending: Boolean = false,
+    val searchQuery: String = "",
+    val filterCategory: TaskCategory? = null,
 ) : UiState {
     val selectedCount: Int get() = selectedTaskIds.size
+
+    /** Tareas del dia seleccionado tras aplicar el buscador de titulo y el filtro de categoria. */
+    val visibleTasks: List<Task>
+        get() =
+            tasks.filter { task ->
+                (filterCategory == null || task.category == filterCategory) &&
+                    (searchQuery.isBlank() || task.title.contains(searchQuery, ignoreCase = true))
+            }
 }
 
 sealed interface TasksIntent : UiIntent {
@@ -54,6 +64,10 @@ sealed interface TasksIntent : UiIntent {
     data object DismissForm : TasksIntent
 
     data class FormTitleChanged(val value: String) : TasksIntent
+
+    data class SearchQueryChanged(val value: String) : TasksIntent
+
+    data class FilterCategoryChanged(val value: TaskCategory) : TasksIntent
 
     data class FormDescriptionChanged(val value: String) : TasksIntent
 

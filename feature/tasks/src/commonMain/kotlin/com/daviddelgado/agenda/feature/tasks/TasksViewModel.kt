@@ -82,6 +82,11 @@ class TasksViewModel(
             is TasksIntent.OpenEditTaskForm -> openFormForEdit(intent.task)
             TasksIntent.DismissForm -> setState { copy(isFormVisible = false) }
             is TasksIntent.FormTitleChanged -> setState { copy(formTitle = intent.value, formError = null) }
+            is TasksIntent.SearchQueryChanged -> setState { copy(searchQuery = intent.value) }
+            is TasksIntent.FilterCategoryChanged ->
+                setState {
+                    copy(filterCategory = if (filterCategory == intent.value) null else intent.value)
+                }
             is TasksIntent.FormDescriptionChanged -> setState { copy(formDescription = intent.value) }
             is TasksIntent.FormCategoryChanged -> setState { copy(formCategory = intent.value) }
             is TasksIntent.FormPriorityChanged -> setState { copy(formPriority = intent.value) }

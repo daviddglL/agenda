@@ -2,6 +2,7 @@ package com.daviddelgado.agenda.feature.tasks
 
 import com.daviddelgado.agenda.domain.model.IncrementUnit
 import com.daviddelgado.agenda.domain.model.Task
+import com.daviddelgado.agenda.domain.model.TaskCategory
 import com.daviddelgado.agenda.domain.usecase.DeleteAllTasksUseCase
 import com.daviddelgado.agenda.domain.usecase.DeleteTaskUseCase
 import com.daviddelgado.agenda.domain.usecase.DeleteTasksUseCase
@@ -455,5 +456,47 @@ class TasksViewModelTest {
 
             assertFalse(viewModel.currentState.isSelectionMode)
             assertTrue(viewModel.currentState.selectedTaskIds.isEmpty())
+        }
+
+    @Test
+    fun elBuscadorFiltraPorTituloSinDistinguirMayusculas() =
+        runTest(dispatcher) {
+            val tareas =
+                listOf(
+                    Task(id = "1", title = "Comprar pan", date = hoy),
+                    Task(id = "2", title = "Gimnasio", date = hoy),
+                )
+            val viewModel = viewModelCon(FakeTaskRepository(tareas))
+
+            viewModel.onIntent(TasksIntent.SearchQueryChanged("gimna"))
+
+            assertEquals(listOf("2"), viewModel.currentState.visibleTasks.map { it.id })
+        }
+
+    @Test
+    fun elFiltroDeCategoriaSoloMuestraEsaCategoria() =
+        runTest(dispatcher) {
+            val tareas =
+                listOf(
+                    Task(id = "1", title = "Comprar pan", date = hoy, category = TaskCategory.HOGAR),
+                    Task(id = "2", title = "Gimnasio", date = hoy, category = TaskCategory.SALUD),
+                )
+            val viewModel = viewModelCon(FakeTaskRepository(tareas))
+
+            viewModel.onIntent(TasksIntent.FilterCategoryChanged(TaskCategory.SALUD))
+
+            assertEquals(listOf("2"), viewModel.currentState.visibleTasks.map { it.id })
+        }
+
+    @Test
+    fun volverAPulsarLaMismaCategoriaQuitaElFiltro() =
+        runTest(dispatcher) {
+            val tareas = listOf(Task(id = "1", title = "Comprar pan", date = hoy, category = TaskCategory.HOGAR))
+            val viewModel = viewModelCon(FakeTaskRepository(tareas))
+
+            viewModel.onIntent(TasksIntent.FilterCategoryChanged(TaskCategory.HOGAR))
+            viewModel.onIntent(TasksIntent.FilterCategoryChanged(TaskCategory.HOGAR))
+
+            assertEquals(listOf("1"), viewModel.currentState.visibleTasks.map { it.id })
         }
 }

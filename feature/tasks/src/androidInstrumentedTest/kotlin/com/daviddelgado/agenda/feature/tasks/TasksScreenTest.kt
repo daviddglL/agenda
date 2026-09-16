@@ -187,4 +187,19 @@ class TasksScreenTest {
             nodo.config.contains(SemanticsActions.ScrollBy),
         )
     }
+
+    @Test
+    fun escribirEnElBuscadorOcultaLasTareasQueNoCoinciden() {
+        val tareas =
+            listOf(
+                Task(id = "1", title = "Comprar pan", date = hoy),
+                Task(id = "2", title = "Gimnasio", date = hoy),
+            )
+        composeRule.setContent { TasksScreen(viewModel = viewModelCon(FakeTaskRepository(tareas))) }
+
+        composeRule.onNodeWithText("Buscar por titulo").performTextInput("gimna")
+
+        composeRule.onNodeWithText("Comprar pan").assertDoesNotExist()
+        composeRule.onNodeWithText("Gimnasio").assertIsDisplayed()
+    }
 }

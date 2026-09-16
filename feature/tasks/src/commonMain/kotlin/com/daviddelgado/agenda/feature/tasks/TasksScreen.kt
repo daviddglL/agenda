@@ -2,6 +2,7 @@ package com.daviddelgado.agenda.feature.tasks
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -23,6 +24,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -117,13 +119,14 @@ private fun TasksList(
     Column(modifier = Modifier.fillMaxSize().padding(contentPadding).padding(16.dp)) {
         if (!state.isSelectionMode) {
             TasksHeader(isSyncing = state.isSyncing, onRefresh = { onIntent(TasksIntent.Refresh) })
+            TasksSearchAndFilters(state = state, onIntent = onIntent)
         }
 
-        if (state.tasks.isEmpty()) {
+        if (state.visibleTasks.isEmpty()) {
             Text(text = "No hay tareas para este dia", modifier = Modifier.padding(top = 24.dp))
         } else {
             LazyColumn {
-                items(state.tasks, key = { it.id }) { task ->
+                items(state.visibleTasks, key = { it.id }) { task ->
                     TaskRow(
                         task = task,
                         isSelectionMode = state.isSelectionMode,
@@ -140,6 +143,33 @@ private fun TasksList(
                         onLongClick = { onIntent(TasksIntent.EnterSelectionMode(task.id)) },
                     )
                 }
+            }
+        }
+    }
+}
+
+/** Buscador de texto libre por titulo + chips de categoria (toggle: pulsar dos veces la quita). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TasksSearchAndFilters(
+    state: TasksState,
+    onIntent: (TasksIntent) -> Unit,
+) {
+    Column {
+        AgendaTextField(
+            value = state.searchQuery,
+            onValueChange = { onIntent(TasksIntent.SearchQueryChanged(it)) },
+            label = "Buscar por titulo",
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+        Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+            TaskCategory.entries.forEach { category ->
+                FilterChip(
+                    selected = state.filterCategory == category,
+                    onClick = { onIntent(TasksIntent.FilterCategoryChanged(category)) },
+                    label = { Text(category.name) },
+                    modifier = Modifier.padding(end = 8.dp),
+                )
             }
         }
     }
