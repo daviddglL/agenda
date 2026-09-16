@@ -37,7 +37,7 @@ dependencies {
     implementation(libs.logback.classic)
     implementation(libs.angus.mail)
     implementation(libs.firebase.admin)
-    implementation(libs.ktor.server.ratelimit)
+    implementation(libs.ktor.server.rateLimit)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.junit)

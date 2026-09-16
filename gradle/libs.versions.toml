@@ -35,7 +35,6 @@ googleServices = "4.4.2"
 firebaseBom = "33.1.0"
 napier = "3.0.0"
 firebaseAdmin = "9.4.1"
-ktor_ratelimit = "0.10.1"
 
 [libraries]
 # Compose / lifecycle (multiplatform)
@@ -94,6 +93,7 @@ ktor-server-authJwt = { group = "io.ktor", name = "ktor-server-auth-jwt", versio
 ktor-server-statusPages = { group = "io.ktor", name = "ktor-server-status-pages", version.ref = "ktor" }
 ktor-server-callLogging = { group = "io.ktor", name = "ktor-server-call-logging", version.ref = "ktor" }
 ktor-server-cors = { group = "io.ktor", name = "ktor-server-cors", version.ref = "ktor" }
+ktor-server-rateLimit = { group = "io.ktor", name = "ktor-server-rate-limit", version.ref = "ktor" }
 ktor-server-websockets = { group = "io.ktor", name = "ktor-server-websockets", version.ref = "ktor" }
 ktor-server-testHost = { group = "io.ktor", name = "ktor-server-test-host", version.ref = "ktor" }
 
@@ -111,7 +111,6 @@ firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.r
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 firebase-admin = { group = "com.google.firebase", name = "firebase-admin", version.ref = "firebaseAdmin" }
 napier = { group = "io.github.aakira", name = "napier", version.ref = "napier" }
-ktor-server-ratelimit = { group = "io.ktor", name = "ktor-server-ratelimit", version.ref = "ktor_ratelimit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
