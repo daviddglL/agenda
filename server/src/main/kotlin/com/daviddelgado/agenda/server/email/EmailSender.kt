@@ -65,7 +65,7 @@ class SmtpEmailSender(
         runCatching {
             val message =
                 MimeMessage(session).apply {
-                    setFrom(InternetAddress(from))
+                    setFrom(InternetAddress(this@SmtpEmailSender.from))
                     setRecipients(Message.RecipientType.TO, to)
                     setSubject(subject)
                     setText(body)
@@ -113,9 +113,13 @@ fun provideEmailSender(
     username: String?,
     password: String?,
     from: String?,
-): EmailSender =
-    if (host != null && port != null && username != null && password != null && from != null) {
-        SmtpEmailSender(host, port, username, password, from)
+): EmailSender {
+    val credenciales = listOfNotNull(host, port, username, password, from)
+    return if (credenciales.size == CREDENCIALES_SMTP_REQUERIDAS) {
+        SmtpEmailSender(host!!, port!!, username!!, password!!, from!!)
     } else {
         NoOpEmailSender
     }
+}
+
+private const val CREDENCIALES_SMTP_REQUERIDAS = 5

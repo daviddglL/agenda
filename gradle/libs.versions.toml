@@ -32,8 +32,8 @@ jbcrypt = "0.4"
 logback = "1.5.6"
 angusMail = "2.0.3"
 googleServices = "4.4.2"
-firebaseBom = "33.1.0"
-napier = "3.0.0"
+firebaseBom = "33.5.1"
+napier = "2.7.1"
 firebaseAdmin = "9.4.1"
 
 [libraries]
@@ -108,7 +108,7 @@ jbcrypt = { group = "org.mindrot", name = "jbcrypt", version.ref = "jbcrypt" }
 logback-classic = { group = "ch.qos.logback", name = "logback-classic", version.ref = "logback" }
 angus-mail = { group = "org.eclipse.angus", name = "angus-mail", version.ref = "angusMail" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
-firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging-ktx" }
 firebase-admin = { group = "com.google.firebase", name = "firebase-admin", version.ref = "firebaseAdmin" }
 napier = { group = "io.github.aakira", name = "napier", version.ref = "napier" }
 
