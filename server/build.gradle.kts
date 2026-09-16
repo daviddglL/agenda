@@ -20,7 +20,6 @@ dependencies {
     implementation(libs.ktor.server.auth)
     implementation(libs.ktor.server.authJwt)
     implementation(libs.ktor.server.statusPages)
-    implementation(libs.ktor.server.rateLimit)
     implementation(libs.ktor.server.callLogging)
     implementation(libs.ktor.server.cors)
     implementation(libs.ktor.server.websockets)
@@ -36,7 +35,9 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.logback.classic)
+    implementation(libs.angus.mail)
     implementation(libs.firebase.admin)
+    implementation(libs.ktor.server.ratelimit)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.junit)
