@@ -106,7 +106,7 @@ class TasksViewModel(
             is TasksIntent.EnterSelectionMode ->
                 setState { copy(isSelectionMode = true, selectedTaskIds = setOf(intent.taskId)) }
             is TasksIntent.ToggleTaskSelection -> toggleSelection(intent.taskId)
-            TasksIntent.SelectAll -> setState { copy(selectedTaskIds = tasks.map { it.id }.toSet()) }
+            TasksIntent.SelectAll -> setState { copy(selectedTaskIds = visibleTasks.map { it.id }.toSet()) }
             TasksIntent.ExitSelectionMode -> setState { copy(isSelectionMode = false, selectedTaskIds = emptySet()) }
             TasksIntent.RequestBulkDelete -> setState { copy(isBulkDeletePending = true) }
             TasksIntent.CancelBulkDelete -> setState { copy(isBulkDeletePending = false) }

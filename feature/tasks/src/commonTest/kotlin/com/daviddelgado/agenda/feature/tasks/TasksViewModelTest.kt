@@ -491,12 +491,36 @@ class TasksViewModelTest {
     @Test
     fun volverAPulsarLaMismaCategoriaQuitaElFiltro() =
         runTest(dispatcher) {
-            val tareas = listOf(Task(id = "1", title = "Comprar pan", date = hoy, category = TaskCategory.HOGAR))
+            // Dos categorias distintas: si el toggle-off estuviera roto (el filtro se quedara
+            // fijo en HOGAR), la tarea de SALUD seguiria oculta y la asercion de abajo fallaria.
+            val tareas =
+                listOf(
+                    Task(id = "1", title = "Comprar pan", date = hoy, category = TaskCategory.HOGAR),
+                    Task(id = "2", title = "Gimnasio", date = hoy, category = TaskCategory.SALUD),
+                )
             val viewModel = viewModelCon(FakeTaskRepository(tareas))
 
             viewModel.onIntent(TasksIntent.FilterCategoryChanged(TaskCategory.HOGAR))
             viewModel.onIntent(TasksIntent.FilterCategoryChanged(TaskCategory.HOGAR))
 
-            assertEquals(listOf("1"), viewModel.currentState.visibleTasks.map { it.id })
+            assertNull(viewModel.currentState.filterCategory)
+            assertEquals(listOf("1", "2"), viewModel.currentState.visibleTasks.map { it.id })
+        }
+
+    @Test
+    fun conUnFiltroDeCategoriaActivoSeleccionarTodasSoloMarcaLasTareasVisibles() =
+        runTest(dispatcher) {
+            val tareas =
+                listOf(
+                    Task(id = "t-1", title = "Uno", date = hoy, category = TaskCategory.HOGAR),
+                    Task(id = "t-2", title = "Dos", date = hoy, category = TaskCategory.SALUD),
+                )
+            val viewModel = viewModelCon(FakeTaskRepository(tareas))
+
+            viewModel.onIntent(TasksIntent.FilterCategoryChanged(TaskCategory.HOGAR))
+            viewModel.onIntent(TasksIntent.EnterSelectionMode("t-1"))
+            viewModel.onIntent(TasksIntent.SelectAll)
+
+            assertEquals(setOf("t-1"), viewModel.currentState.selectedTaskIds)
         }
 }
