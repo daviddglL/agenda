@@ -46,6 +46,8 @@ private class FakeAuthRepository(private val error: Throwable? = null) : AuthRep
     override suspend fun restoreSession(): User? = null
 
     override suspend fun deleteAccount(): Result<Unit> = Result.success(Unit)
+
+    override suspend fun registerFcmToken(token: String): Result<Unit> = Result.success(Unit)
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)

@@ -58,6 +58,8 @@ private class FakeAuthRepository(
         current.value = null
         return Result.success(Unit)
     }
+
+    override suspend fun registerFcmToken(token: String): Result<Unit> = Result.success(Unit)
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
