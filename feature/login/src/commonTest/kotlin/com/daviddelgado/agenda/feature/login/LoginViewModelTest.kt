@@ -3,6 +3,7 @@ package com.daviddelgado.agenda.feature.login
 import com.daviddelgado.agenda.domain.model.User
 import com.daviddelgado.agenda.domain.repository.AuthRepository
 import com.daviddelgado.agenda.domain.usecase.LoginUseCase
+import com.daviddelgado.agenda.domain.usecase.RegisterFcmTokenUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -48,6 +49,19 @@ private class FakeAuthRepository(private val error: Throwable? = null) : AuthRep
     override suspend fun restoreSession(): User? = null
 
     override suspend fun deleteAccount(): Result<Unit> = Result.success(Unit)
+
+    var tokenRegistrado: String? = null
+        private set
+
+    override suspend fun registerFcmToken(token: String): Result<Unit> {
+        tokenRegistrado = token
+        return Result.success(Unit)
+    }
+}
+
+/** FcmTokenProvider falso: evita depender de Firebase real en los tests (Task 10). */
+private class FakeFcmTokenProvider(private val token: String? = "token-fcm-fake") : FcmTokenProvider {
+    override suspend fun currentToken(): String? = token
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -64,10 +78,15 @@ class LoginViewModelTest {
         Dispatchers.resetMain()
     }
 
+    private fun crearViewModel(
+        repository: AuthRepository = FakeAuthRepository(),
+        fcmTokenProvider: FcmTokenProvider = FakeFcmTokenProvider(),
+    ) = LoginViewModel(LoginUseCase(repository), RegisterFcmTokenUseCase(repository), fcmTokenProvider)
+
     @Test
     fun escribirEmailYContrasenaActualizaElEstado() =
         runTest(dispatcher) {
-            val viewModel = LoginViewModel(LoginUseCase(FakeAuthRepository()))
+            val viewModel = crearViewModel()
 
             viewModel.onIntent(LoginIntent.EmailChanged("david@test.com"))
             viewModel.onIntent(LoginIntent.PasswordChanged("secreta123"))
@@ -80,7 +99,7 @@ class LoginViewModelTest {
     fun enviarConCamposVaciosNoLlamaAlServidorYAvisaAlUsuario() =
         runTest(dispatcher) {
             val repository = FakeAuthRepository()
-            val viewModel = LoginViewModel(LoginUseCase(repository))
+            val viewModel = crearViewModel(repository)
 
             viewModel.onIntent(LoginIntent.Submit)
 
@@ -91,7 +110,7 @@ class LoginViewModelTest {
     @Test
     fun escribirDeNuevoLimpiaElErrorAnterior() =
         runTest(dispatcher) {
-            val viewModel = LoginViewModel(LoginUseCase(FakeAuthRepository()))
+            val viewModel = crearViewModel()
             viewModel.onIntent(LoginIntent.Submit)
 
             viewModel.onIntent(LoginIntent.EmailChanged("david@test.com"))
@@ -102,7 +121,7 @@ class LoginViewModelTest {
     @Test
     fun elLoginCorrectoNavegaAHomeYQuitaElCargando() =
         runTest(dispatcher) {
-            val viewModel = LoginViewModel(LoginUseCase(FakeAuthRepository()))
+            val viewModel = crearViewModel()
             val efectos = mutableListOf<LoginEffect>()
             viewModel.effect.onEach { efectos += it }.launchIn(backgroundScope)
 
@@ -119,7 +138,7 @@ class LoginViewModelTest {
     fun elLoginFallidoMuestraElMensajeDelServidor() =
         runTest(dispatcher) {
             val repository = FakeAuthRepository(IllegalStateException("Email o contrasena incorrectos"))
-            val viewModel = LoginViewModel(LoginUseCase(repository))
+            val viewModel = crearViewModel(repository)
             val efectos = mutableListOf<LoginEffect>()
             viewModel.effect.onEach { efectos += it }.launchIn(backgroundScope)
 
@@ -135,12 +154,38 @@ class LoginViewModelTest {
     @Test
     fun pedirRegistroEmiteElEfectoDeNavegacion() =
         runTest(dispatcher) {
-            val viewModel = LoginViewModel(LoginUseCase(FakeAuthRepository()))
+            val viewModel = crearViewModel()
             val efectos = mutableListOf<LoginEffect>()
             viewModel.effect.onEach { efectos += it }.launchIn(backgroundScope)
 
             viewModel.onIntent(LoginIntent.NavigateToRegister)
 
             assertEquals(listOf<LoginEffect>(LoginEffect.NavigateToRegister), efectos)
+        }
+
+    @Test
+    fun elLoginCorrectoRegistraElTokenFcmEnElServidor() =
+        runTest(dispatcher) {
+            val repository = FakeAuthRepository()
+            val viewModel = crearViewModel(repository, FakeFcmTokenProvider("token-fcm-fake"))
+
+            viewModel.onIntent(LoginIntent.EmailChanged("david@test.com"))
+            viewModel.onIntent(LoginIntent.PasswordChanged("secreta123"))
+            viewModel.onIntent(LoginIntent.Submit)
+
+            assertEquals("token-fcm-fake", repository.tokenRegistrado)
+        }
+
+    @Test
+    fun elLoginCorrectoSinTokenFcmDisponibleNoLlamaAlServidor() =
+        runTest(dispatcher) {
+            val repository = FakeAuthRepository()
+            val viewModel = crearViewModel(repository, FakeFcmTokenProvider(token = null))
+
+            viewModel.onIntent(LoginIntent.EmailChanged("david@test.com"))
+            viewModel.onIntent(LoginIntent.PasswordChanged("secreta123"))
+            viewModel.onIntent(LoginIntent.Submit)
+
+            assertNull(repository.tokenRegistrado)
         }
 }

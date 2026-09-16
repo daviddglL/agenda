@@ -9,6 +9,7 @@ import androidx.compose.ui.test.performTextInput
 import com.daviddelgado.agenda.domain.model.User
 import com.daviddelgado.agenda.domain.repository.AuthRepository
 import com.daviddelgado.agenda.domain.usecase.LoginUseCase
+import com.daviddelgado.agenda.domain.usecase.RegisterFcmTokenUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
@@ -39,6 +40,13 @@ private class FakeAuthRepository(private val error: Throwable? = null) : AuthRep
     override suspend fun restoreSession(): User? = null
 
     override suspend fun deleteAccount(): Result<Unit> = Result.success(Unit)
+
+    override suspend fun registerFcmToken(token: String): Result<Unit> = Result.success(Unit)
+}
+
+/** FcmTokenProvider falso: sin token, no importa para estos tests de UI (Task 10). */
+private class FakeFcmTokenProvider : FcmTokenProvider {
+    override suspend fun currentToken(): String? = null
 }
 
 /**
@@ -59,7 +67,12 @@ class LoginScreenTest {
             LoginScreen(
                 onNavigateToHome = onNavigateToHome,
                 onNavigateToRegister = onNavigateToRegister,
-                viewModel = LoginViewModel(LoginUseCase(repository)),
+                viewModel =
+                    LoginViewModel(
+                        LoginUseCase(repository),
+                        RegisterFcmTokenUseCase(repository),
+                        FakeFcmTokenProvider(),
+                    ),
             )
         }
     }

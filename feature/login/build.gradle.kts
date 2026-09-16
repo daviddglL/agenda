@@ -31,6 +31,10 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
         }
 
+        androidMain.dependencies {
+            implementation(libs.firebase.messaging)
+        }
+
         // Tests de UI de Compose (punto 5 de markdown.md): corren en un dispositivo o
         // emulador Android real, montando la pantalla con un ViewModel real + un fake propio
         // (no se reutiliza el de LoginViewModelTest.kt: es privado a ese fichero y vive en
@@ -56,4 +60,11 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+}
+
+// El DSL de dependencias de Kotlin Multiplatform (arriba, "androidMain.dependencies") no
+// resuelve bien un BOM (platform(...)); se añade aqui, con el DSL clasico de Gradle, igual
+// que hace androidApp/build.gradle.kts.
+dependencies {
+    add("androidMainImplementation", platform(libs.firebase.bom))
 }
