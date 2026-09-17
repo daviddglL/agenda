@@ -49,8 +49,15 @@ private sealed interface AppScreen {
     data object Home : AppScreen
 }
 
+/**
+ * @param onHomeShown se llama una vez cada vez que se entra a Home (tras login, registro o
+ * sesion recuperada en el splash). Cada plataforma decide que hacer con el aviso; hoy solo
+ * Android lo usa para pedir el permiso `POST_NOTIFICATIONS` en tiempo de ejecucion (ver
+ * `MainActivity`), necesario desde API 33 para que se vean los recordatorios push (seccion
+ * 7quinquies/10 de ESTADO_PROYECTO.md). iOS no pasa nada y no ocurre nada.
+ */
 @Composable
-fun App() {
+fun App(onHomeShown: () -> Unit = {}) {
     AgendaTheme {
         var screen by remember { mutableStateOf<AppScreen>(AppScreen.Splash) }
 
@@ -74,7 +81,8 @@ fun App() {
                     email = current.email,
                     onPasswordReset = { screen = AppScreen.Login(justReset = true) },
                 )
-            AppScreen.Home -> HomeWithTabs(onLoggedOut = { screen = AppScreen.Login() })
+            AppScreen.Home ->
+                HomeWithTabs(onLoggedOut = { screen = AppScreen.Login() }, onShown = onHomeShown)
         }
     }
 }
@@ -101,11 +109,18 @@ private fun SplashScreen(onFinished: (hasSession: Boolean) -> Unit) {
     }
 }
 
-/** @param onLoggedOut vuelve a la pantalla de login: se llama al cerrar sesion o borrar la cuenta. */
+/**
+ * @param onLoggedOut vuelve a la pantalla de login: se llama al cerrar sesion o borrar la cuenta.
+ * @param onShown se llama una vez al entrar a Home (ver [App]).
+ */
 @Composable
-private fun HomeWithTabs(onLoggedOut: () -> Unit) {
+private fun HomeWithTabs(
+    onLoggedOut: () -> Unit,
+    onShown: () -> Unit,
+) {
     val navigator = remember { HomeNavigator() }
     val navState by navigator.state.collectAsState()
+    LaunchedEffect(Unit) { onShown() }
 
     Scaffold(
         bottomBar = {

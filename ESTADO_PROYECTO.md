@@ -5,13 +5,14 @@ decisiones ya tomadas para no repetir trabajo ni contradecirlas sin querer. La s
 técnica obligatoria (no negociable) sigue estando en [markdown.md](markdown.md); este
 documento es el "qué se ha hecho, qué falta y cómo se arranca" sobre esa base.
 
-Última actualización: 2026-09-17 (sesión 6: fusionadas a `main` las ramas
+Última actualización: 2026-09-17 (sesión 6, continuada: fusionadas a `main` las ramas
 `worktree-calidad-seguridad-recordatorios` y `feature/recuperacion-password`, que llevaban
 días completas y verificadas pero sin integrar; arreglado el bug del calendario centrado
-(sección 7septies); cerrados además dos huecos de seguridad documentados desde antes: rate
-limiting seguro detrás de proxy inverso y borrado del token FCM al hacer logout (sección
-7octies); y arreglado el CI de GitHub Actions, que fallaba siempre al descargar Gradle
-(sección 7novies). Sesión cerrada con el working tree limpio y `main` al día con
+(sección 7septies); cerrados dos huecos de seguridad documentados desde antes: rate limiting
+seguro detrás de proxy inverso y borrado del token FCM al hacer logout (sección 7octies);
+arreglado el CI de GitHub Actions, que fallaba siempre al descargar Gradle (sección 7novies);
+y pedido de verdad el permiso `POST_NOTIFICATIONS` en tiempo de ejecución, verificado en
+caliente en el emulador (sección 7decies). Working tree limpio y `main` al día con
 `origin/main`.
 
 ## 0. Resumen en una frase
@@ -669,6 +670,27 @@ Verificación de esta sesión:
   si sigue fallando, revisar si hay algo más en el runner (versión de Java, etc.) antes de
   tocar de nuevo el wrapper.
 
+## 7decies. Sesión 6 (2026-09-17): pide el permiso POST_NOTIFICATIONS al entrar a Home
+
+- **`App()`** (`shared/.../App.kt`) gana el parámetro `onHomeShown: () -> Unit = {}`, llamado
+  una vez (`LaunchedEffect(Unit)`) cada vez que se entra a `HomeWithTabs` — tras login,
+  registro o sesión recuperada en el splash. Común a las dos plataformas; por defecto no hace
+  nada (iOS no lo usa).
+- **`MainActivity`** (único sitio con acceso real a `ActivityResultContracts`, por eso no vive
+  en `shared`): registra un `rememberLauncherForActivityResult(RequestPermission())` y, en
+  `onHomeShown`, pide `POST_NOTIFICATIONS` solo si `SDK_INT >= 33` y el permiso no estaba ya
+  concedido — sin esto, se quedaba denegado para siempre en Android 13+ y los recordatorios
+  push nunca se habrían visto (gap real de la sección 10, ya cerrado).
+- Sin tests automáticos (código de arranque de `Activity`/`ActivityResultLauncher`, igual que
+  `AgendaFirebaseMessagingService`: no hay infraestructura de test para esto en el repo).
+  Verificado en caliente en el emulador Pixel_6a (Android 14) con instalación limpia:
+  - Antes de tocar nada: `adb dumpsys package` confirmaba `POST_NOTIFICATIONS: granted=false`.
+  - Login con `e2e@test.com` → al llegar a "Mis tareas" (Home) aparece de inmediato el diálogo
+    del sistema "Allow Agenda to send you notifications?" (capturado con `adb screencap`).
+  - Tras pulsar "Allow": `adb dumpsys package` confirma `granted=true`; la app sigue
+    funcionando con normalidad (sin crash, logcat sin excepciones nuevas).
+- `./gradlew check` completo → **BUILD SUCCESSFUL** antes de la verificación manual.
+
 ## 8. Producción: URL y certificate pinning (infraestructura lista, sin dominio real)
 
 No hay todavía un backend desplegado en un dominio real, así que no hay pines de
@@ -730,17 +752,11 @@ Code con las tareas de arriba.
 4. **Falta paginación/paginado en `GET /tasks`**: con muchísimas tareas el `syncTasks()`
    baja la lista entera cada vez; no es un problema con el volumen esperado de una app
    personal, pero no escalaría a un uso muy intensivo.
-5. **No se pide el permiso `POST_NOTIFICATIONS` en tiempo de ejecución**: el manifest lo
-   declara y `AgendaFirebaseMessagingService` comprueba si está concedido antes de mostrar
-   una notificación (ver sección 7quinquies), pero no hay ningún flujo en la app que lo
-   pida al usuario (`ActivityResultContracts.RequestPermission` o similar). En Android 13+
-   el permiso empieza denegado, así que los recordatorios push no se van a ver en la
-   práctica hasta que el usuario lo conceda a mano desde Ajustes del sistema.
-6. **`AGENDA_FIREBASE_SERVICE_ACCOUNT_JSON` y `androidApp/google-services.json` sin
+5. **`AGENDA_FIREBASE_SERVICE_ACCOUNT_JSON` y `androidApp/google-services.json` sin
    credenciales reales**: sin un proyecto Firebase real, los recordatorios push funcionan
    solo hasta donde llega `NoOpPushSender`/la lógica probada con tests (ver sección
    7quinquies); nunca se ha mandado una notificación real a un dispositivo.
-7. **`ReminderScheduler` (servidor) trata todas las fechas/horas de tarea como UTC**: no hay
+6. **`ReminderScheduler` (servidor) trata todas las fechas/horas de tarea como UTC**: no hay
    ningún campo de zona horaria en `Task`/`Tasks`, así que un recordatorio puesto a las 09:00
    por un usuario en España puede dispararse una o dos horas más tarde/temprano en hora local
    según la época del año. Corregirlo de verdad necesita añadir un campo de zona horaria a la
@@ -749,8 +765,9 @@ Code con las tareas de arriba.
    real.
 
 (Los puntos "editar una tarea desde el calendario", "regresión visual en el calendario", "el
-token FCM no se borra al hacer logout" y "el rate limiting no soporta proxy inverso" que
-estaban aquí se resolvieron en sesiones posteriores, ver secciones 7bis, 7septies y 7octies.)
+token FCM no se borra al hacer logout", "el rate limiting no soporta proxy inverso" y "no se
+pide el permiso POST_NOTIFICATIONS" que estaban aquí se resolvieron en sesiones posteriores,
+ver secciones 7bis, 7septies, 7octies y 7decies.)
 
 ## 11. Decisiones tomadas que conviene no deshacer sin pensarlo
 
