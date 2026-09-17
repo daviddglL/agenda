@@ -11,9 +11,10 @@ días completas y verificadas pero sin integrar; arreglado el bug del calendario
 (sección 7septies); cerrados dos huecos de seguridad documentados desde antes: rate limiting
 seguro detrás de proxy inverso y borrado del token FCM al hacer logout (sección 7octies);
 arreglado el CI de GitHub Actions, que fallaba siempre al descargar Gradle (sección 7novies);
-y pedido de verdad el permiso `POST_NOTIFICATIONS` en tiempo de ejecución, verificado en
-caliente en el emulador (sección 7decies). Working tree limpio y `main` al día con
-`origin/main`.
+pedido de verdad el permiso `POST_NOTIFICATIONS` en tiempo de ejecución, verificado en
+caliente en el emulador (sección 7decies); y conectadas credenciales reales de Firebase, con
+un push de verdad recibido en el dispositivo por primera vez en todo el proyecto (sección
+7undecies). Working tree limpio y `main` al día con `origin/main`.
 
 ## 0. Resumen en una frase
 
@@ -691,6 +692,40 @@ Verificación de esta sesión:
     funcionando con normalidad (sin crash, logcat sin excepciones nuevas).
 - `./gradlew check` completo → **BUILD SUCCESSFUL** antes de la verificación manual.
 
+## 7undecies. Sesión 6 (2026-09-17): credenciales reales de Firebase, push probado de extremo a extremo
+
+- **Proyecto Firebase real** (`agenda-695c9`) ya creado por el usuario. Dos credenciales:
+  - `androidApp/google-services.json`: sustituido el placeholder por el real, descargado de
+    Firebase Console (Configuración del proyecto > General > tu app Android). Se versiona
+    en el repo (repo privado; Google documenta este fichero como seguro de versionar, no es
+    un secreto de servidor).
+  - Clave de cuenta de servicio (Configuración del proyecto > Cuentas de servicio > Generar
+    nueva clave privada): **esta sí es un secreto real** — se guarda fuera del repo (el
+    usuario la puso en una carpeta local suya) y se referencia solo por ruta en la variable
+    de entorno `AGENDA_FIREBASE_SERVICE_ACCOUNT_JSON` al arrancar el servidor. Nunca se ha
+    commiteado ni pegado en ningún sitio; solo se ha verificado su estructura (`type`,
+    `project_id`, `client_email`) sin exponer el `private_key`.
+- **Verificado en caliente, extremo a extremo, con Firebase real** (emulador Pixel_6a,
+  servidor local con la credencial real):
+  1. Servidor relanzado con `AGENDA_FIREBASE_SERVICE_ACCOUNT_JSON` apuntando a la clave real
+     → sin el error `No se pudo inicializar FirebasePushSender` en el log (antes caía a
+     `NoOpPushSender`).
+  2. App reinstalada (necesario: `google-services` gradle plugin regenera recursos a partir
+     de `google-services.json` en build) → sesión recuperada → el dispositivo obtiene un
+     token FCM real de Firebase y lo registra en el servidor
+     (`POST /users/me/fcm-token` → 204).
+  3. Tarea creada con recordatorio `UNA_VEZ` a una hora ya pasada (para que
+     `ReminderScheduler.isDue` la marque como pendiente en el siguiente ciclo del bucle,
+     cada 60s).
+  4. **Notificación push real recibida en el dispositivo** (confirmado con
+     `adb shell cmd notification list` y capturado visualmente en el panel de
+     notificaciones: "Agenda · Push · Recordatorio de tarea") — primera vez que se manda un
+     push de verdad en todo el proyecto, no solo probado con tests/lógica.
+  5. Tarea de prueba borrada al terminar para no dejar basura en la cuenta `e2e@test.com`.
+- Nota para producción (sin cambios de código, solo de despliegue): el servidor de producción
+  necesitará su propia forma de proveer `AGENDA_FIREBASE_SERVICE_ACCOUNT_JSON` (variable de
+  entorno del hosting, no un fichero en el repo) igual que ya se hace en local.
+
 ## 8. Producción: URL y certificate pinning (infraestructura lista, sin dominio real)
 
 No hay todavía un backend desplegado en un dominio real, así que no hay pines de
@@ -752,11 +787,7 @@ Code con las tareas de arriba.
 4. **Falta paginación/paginado en `GET /tasks`**: con muchísimas tareas el `syncTasks()`
    baja la lista entera cada vez; no es un problema con el volumen esperado de una app
    personal, pero no escalaría a un uso muy intensivo.
-5. **`AGENDA_FIREBASE_SERVICE_ACCOUNT_JSON` y `androidApp/google-services.json` sin
-   credenciales reales**: sin un proyecto Firebase real, los recordatorios push funcionan
-   solo hasta donde llega `NoOpPushSender`/la lógica probada con tests (ver sección
-   7quinquies); nunca se ha mandado una notificación real a un dispositivo.
-6. **`ReminderScheduler` (servidor) trata todas las fechas/horas de tarea como UTC**: no hay
+5. **`ReminderScheduler` (servidor) trata todas las fechas/horas de tarea como UTC**: no hay
    ningún campo de zona horaria en `Task`/`Tasks`, así que un recordatorio puesto a las 09:00
    por un usuario en España puede dispararse una o dos horas más tarde/temprano en hora local
    según la época del año. Corregirlo de verdad necesita añadir un campo de zona horaria a la
@@ -765,9 +796,10 @@ Code con las tareas de arriba.
    real.
 
 (Los puntos "editar una tarea desde el calendario", "regresión visual en el calendario", "el
-token FCM no se borra al hacer logout", "el rate limiting no soporta proxy inverso" y "no se
-pide el permiso POST_NOTIFICATIONS" que estaban aquí se resolvieron en sesiones posteriores,
-ver secciones 7bis, 7septies, 7octies y 7decies.)
+token FCM no se borra al hacer logout", "el rate limiting no soporta proxy inverso", "no se
+pide el permiso POST_NOTIFICATIONS" y "sin credenciales reales de Firebase" que estaban aquí
+se resolvieron en sesiones posteriores, ver secciones 7bis, 7septies, 7octies, 7decies y
+7undecies.)
 
 ## 11. Decisiones tomadas que conviene no deshacer sin pensarlo
 

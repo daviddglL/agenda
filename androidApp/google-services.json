@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "000000000000",
-    "project_id": "agenda-placeholder",
-    "storage_bucket": "agenda-placeholder.appspot.com"
+    "project_number": "932764540313",
+    "project_id": "agenda-695c9",
+    "storage_bucket": "agenda-695c9.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "mobilesdk_app_id": "1:932764540313:android:870b36d94754e2475b0708",
         "android_client_info": {
           "package_name": "com.daviddelgado.agenda"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "PLACEHOLDER_API_KEY_SUSTITUIR_CON_EL_REAL_DE_FIREBASE"
+          "current_key": "AIzaSyA9fV7VmOJdbsYKTPa8MLaRta3_U3e1Xo8"
         }
       ],
       "services": {
