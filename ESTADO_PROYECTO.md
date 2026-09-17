@@ -5,10 +5,10 @@ decisiones ya tomadas para no repetir trabajo ni contradecirlas sin querer. La s
 técnica obligatoria (no negociable) sigue estando en [markdown.md](markdown.md); este
 documento es el "qué se ha hecho, qué falta y cómo se arranca" sobre esa base.
 
-Última actualización: 2026-09-16 (cierre del plan `recuperacion-password`: recuperación de
-contraseña por email con código de un solo uso, invalidación de sesión vía `token_version`,
-nuevo módulo `feature:passwordreset` con dos pantallas y enlace desde el login — verificado
-de extremo a extremo a mano en el emulador contra el servidor real, ver sección 7sexies).
+Última actualización: 2026-09-17 (sesión 6: fusionadas a `main` las ramas
+`worktree-calidad-seguridad-recordatorios` y `feature/recuperacion-password`, que llevaban
+días completas y verificadas pero sin integrar; arreglado además el bug del calendario
+centrado, ver sección 7septies).
 
 ## 0. Resumen en una frase
 
@@ -581,6 +581,32 @@ Verificación de esta sesión:
   (`SmtpEmailSender`) no se ha probado contra un servidor SMTP de verdad — solo la lógica con
   tests (`EmailSenderTest`) y el flujo completo con `NoOpEmailSender` en desarrollo.
 
+## 7septies. Sesión 6 (2026-09-17): integración de ramas pendientes + fix del calendario
+
+- **`main` estaba desactualizado** (commit `6b99ebe`, sección 7bis en adelante nunca
+  fusionada): dos ramas con trabajo completo, probado y documentado (`ESTADO_PROYECTO.md`
+  secciones 7quinquies/7sexies) llevaban desde el 2026-09-15/16 sin integrarse —
+  `worktree-calidad-seguridad-recordatorios` (logging, accesibilidad, CI, seguridad del
+  servidor, recordatorios push, buscador) y `feature/recuperacion-password` (construida
+  encima de la anterior). El working tree de `main` tenía además una instantánea sin
+  commitear de la sesión 5, verificada como idéntica al commit `7d72b05` con el que había
+  arrancado el primer worktree (ninguna pérdida de trabajo al descartarla).
+- Fusión con `git merge --ff-only feature/recuperacion-password` (sin conflictos, `main`
+  pasó a `3e31382`), `./gradlew check` reconfirmado en verde tras el merge, push a
+  `origin/main`. Worktrees y ramas ya fusionadas eliminados.
+- **Bug real arreglado con TDD**: la última semana del calendario (`CalendarScreen.MonthGrid`)
+  quedaba centrada en vez de alineada por columnas porque `weeks` solo rellenaba huecos al
+  principio del mes, nunca al final, y el `Row` de cada semana usa `Arrangement.Center`.
+  Extraída la construcción de semanas a una función pura y testeable,
+  `monthWeeks(year, month)` (`feature/calendar/.../CalendarLayout.kt`, junto a
+  `squareCellSizeDp`), que ahora rellena también el final de la última semana con `null`
+  hasta completar `DAYS_PER_WEEK` columnas. Dos tests nuevos en `CalendarLayoutTest`: todas
+  las semanas tienen 7 columnas (incluida la última) y los días del mes aparecen en orden
+  sin duplicar ni saltar ninguno.
+- `./gradlew :feature:calendar:testDebugUnitTest` -> BUILD SUCCESSFUL. `./gradlew check`
+  completo pendiente de confirmar en esta misma sesión tras el fix (ver el resultado real
+  antes de asumir que sigue en verde).
+
 ## 8. Producción: URL y certificate pinning (infraestructura lista, sin dominio real)
 
 No hay todavía un backend desplegado en un dominio real, así que no hay pines de
@@ -661,22 +687,14 @@ Code con las tareas de arriba.
    explotable (sin credenciales Firebase reales ni permiso `POST_NOTIFICATIONS` concedido, el
    push no llega a ningún sitio), pero hay que cerrarlo antes de activar push de verdad:
    añadir la ruta de borrado + repositorio y llamarla desde `logout()`.
-8. **Regresión visual en el calendario: la última semana del mes queda centrada en vez de
-   alineada por columnas**. `CalendarScreen.kt`'s `MonthGrid` usa
-   `Arrangement.Center` en el `Row` de cada semana; como `weeks` solo rellena huecos al
-   principio del mes (no al final), la última semana (con menos de 7 días) se centra en vez
-   de quedarse alineada bajo sus columnas de día de la semana. Viene de la revisión de
-   cuadrícula cuadrada de la sesión 5 (sección 7ter) — antes de eso el `Row` no centraba.
-   Solo estético (no afecta a qué día se pulsa), pero visible. Arreglo sugerido: rellenar
-   también el final de la última semana con `null`s hasta 7 elementos.
-9. **`ReminderScheduler` (servidor) trata todas las fechas/horas de tarea como UTC**: no hay
+8. **`ReminderScheduler` (servidor) trata todas las fechas/horas de tarea como UTC**: no hay
    ningún campo de zona horaria en `Task`/`Tasks`, así que un recordatorio puesto a las 09:00
    por un usuario en España puede dispararse una o dos horas más tarde/temprano en hora local
    según la época del año. Corregirlo de verdad necesita añadir un campo de zona horaria a la
    tarea (tocaría los cuatro sitios de la sección 3), fuera del alcance de lo hecho hasta
    ahora — hay que tenerlo en cuenta antes de dar por fiable la hora de un recordatorio push
    real.
-10. **El rate limiting de `/auth/*` filtra por `call.request.origin.remoteHost`**: correcto
+9. **El rate limiting de `/auth/*` filtra por `call.request.origin.remoteHost`**: correcto
     mientras el servidor no esté detrás de un proxy inverso; si en el futuro se despliega
     detrás de nginx/Cloudflare/similar sin más cambios, todas las peticiones verían la IP del
     proxy como origen y compartirían el mismo cupo de 10 peticiones/60s — hay que añadir

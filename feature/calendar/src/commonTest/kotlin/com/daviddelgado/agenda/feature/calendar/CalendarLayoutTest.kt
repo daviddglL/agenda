@@ -1,7 +1,13 @@
 package com.daviddelgado.agenda.feature.calendar
 
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.Month
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class CalendarLayoutTest {
     @Test
@@ -25,5 +31,28 @@ class CalendarLayoutTest {
 
         assertEquals(120f, conCincoSemanas)
         assertEquals(100f, conSeisSemanas)
+    }
+
+    @Test
+    fun todasLasSemanasTienenSieteColumnasIncluidaLaUltima() {
+        // Regresion: la ultima semana solo tenia los dias que quedaban (sin rellenar con
+        // null hasta 7), asi que Arrangement.Center la centraba en vez de alinearla bajo
+        // sus columnas de dia de la semana.
+        val semanas = monthWeeks(2026, Month.SEPTEMBER)
+
+        assertTrue(semanas.isNotEmpty())
+        assertTrue(semanas.all { it.size == 7 })
+    }
+
+    @Test
+    fun losDiasDelMesAparecenEnOrdenSinDuplicarNiSaltarNinguno() {
+        val anio = 2026
+        val mes = Month.SEPTEMBER
+        val primerDia = LocalDate(anio, mes, 1)
+        val diasEnElMes = primerDia.plus(1, DateTimeUnit.MONTH).minus(1, DateTimeUnit.DAY).dayOfMonth
+
+        val dias = monthWeeks(anio, mes).flatten().filterNotNull()
+
+        assertEquals((1..diasEnElMes).map { LocalDate(anio, mes, it) }, dias)
     }
 }

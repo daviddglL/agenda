@@ -31,10 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.daviddelgado.agenda.designsystem.theme.AgendaViolet
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.minus
-import kotlinx.datetime.plus
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -79,8 +76,6 @@ fun CalendarScreen(
     }
 }
 
-private const val DAYS_PER_WEEK = 7
-
 /**
  * Cuadricula del mes: cada celda es cuadrada y su tamano se calcula en cada composicion a
  * partir del espacio realmente disponible (columnas fijas = 7 dias, filas = semanas del mes
@@ -93,15 +88,7 @@ private fun MonthGrid(
     onSelectDate: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val firstOfMonth = LocalDate(state.visibleMonth.year, state.visibleMonth.month, 1)
-    val daysInMonth = firstOfMonth.plus(1, DateTimeUnit.MONTH).minus(1, DateTimeUnit.DAY).dayOfMonth
-    val leadingBlanks = firstOfMonth.dayOfWeek.ordinal
-
-    val weeks =
-        buildList {
-            repeat(leadingBlanks) { add(null) }
-            for (day in 1..daysInMonth) add(LocalDate(state.visibleMonth.year, state.visibleMonth.month, day))
-        }.chunked(DAYS_PER_WEEK)
+    val weeks = monthWeeks(state.visibleMonth.year, state.visibleMonth.month)
 
     BoxWithConstraints(modifier = modifier) {
         val cellSize = squareCellSizeDp(maxWidth.value, maxHeight.value, DAYS_PER_WEEK, weeks.size).dp
