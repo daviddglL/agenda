@@ -27,10 +27,17 @@ import kotlin.random.Random
  */
 fun withApi(
     emailSender: EmailSender = NoOpEmailSender,
+    trustedProxies: Set<String> = emptySet(),
     block: suspend ApplicationTestBuilder.(HttpClient) -> Unit,
 ) = testApplication {
     val databaseName = "agenda-test-${Random.nextLong()}"
-    application { agendaModule("jdbc:h2:mem:$databaseName;DB_CLOSE_DELAY=-1", emailSender = emailSender) }
+    application {
+        agendaModule(
+            "jdbc:h2:mem:$databaseName;DB_CLOSE_DELAY=-1",
+            emailSender = emailSender,
+            trustedProxies = trustedProxies,
+        )
+    }
     val client =
         createClient {
             install(ContentNegotiation) { json() }

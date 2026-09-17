@@ -10,9 +10,11 @@ import com.daviddelgado.agenda.server.security.PasswordHasher
 import io.ktor.client.call.body
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import kotlin.test.Test
@@ -160,6 +162,34 @@ class AuthRoutesTest {
                 }.last()
 
             assertEquals(HttpStatusCode.TooManyRequests, intentoQueDeberiaBloquear.status)
+        }
+
+    @Test
+    fun detrasDeUnProxyDeConfianzaElLimiteEsPorClienteRealNoPorElProxy() =
+        // "localhost" es la conexion TCP que reporta el motor de test de Ktor para toda
+        // peticion (ver TestApplicationRequest); se declara aqui como el proxy de confianza
+        // para poder simular dos clientes reales distintos vía X-Forwarded-For.
+        withApi(trustedProxies = setOf("localhost")) { client ->
+            client.registrarUsuario(email = "proxy-a@test.com", password = "secreta123")
+            client.registrarUsuario(email = "proxy-b@test.com", password = "secreta123")
+
+            val ultimoIntentoDeA =
+                (1..12).map {
+                    client.post("/auth/login") {
+                        header(HttpHeaders.XForwardedFor, "1.1.1.1")
+                        contentType(ContentType.Application.Json)
+                        setBody(LoginRequest(email = "proxy-a@test.com", password = "incorrecta"))
+                    }
+                }.last()
+            val intentoDeB =
+                client.post("/auth/login") {
+                    header(HttpHeaders.XForwardedFor, "2.2.2.2")
+                    contentType(ContentType.Application.Json)
+                    setBody(LoginRequest(email = "proxy-b@test.com", password = "incorrecta"))
+                }
+
+            assertEquals(HttpStatusCode.TooManyRequests, ultimoIntentoDeA.status)
+            assertEquals(HttpStatusCode.Unauthorized, intentoDeB.status)
         }
 
     @Test

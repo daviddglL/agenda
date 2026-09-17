@@ -14,6 +14,7 @@ import com.daviddelgado.agenda.server.routes.authRoutes
 import com.daviddelgado.agenda.server.routes.taskRoutes
 import com.daviddelgado.agenda.server.routes.userRoutes
 import com.daviddelgado.agenda.server.security.JwtConfig
+import com.daviddelgado.agenda.server.security.resolveClientAddress
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
@@ -27,7 +28,6 @@ import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.callloging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.cors.routing.CORS
-import io.ktor.server.plugins.origin
 import io.ktor.server.plugins.ratelimit.RateLimit
 import io.ktor.server.plugins.ratelimit.RateLimitName
 import io.ktor.server.plugins.statuspages.StatusPages
@@ -48,6 +48,20 @@ private const val WEBSOCKET_PING_TIMEOUT_MILLIS = 15_000L
 /** H2 en fichero por defecto; `AGENDA_DB_URL` permite apuntar a otra base (p.ej. Postgres). */
 private val defaultJdbcUrl: String
     get() = System.getenv("AGENDA_DB_URL") ?: "jdbc:h2:file:./data/agenda;AUTO_SERVER=TRUE"
+
+/**
+ * IPs del/de los proxy(s) inverso(s) propio(s) (nginx, Cloudflare, etc.) delante del servidor,
+ * separadas por comas. Vacio por defecto: sin desplegar detras de un proxy, el rate limiting
+ * usa siempre la conexion TCP real (ver [resolveClientAddress]).
+ */
+private val trustedProxiesFromEnv: Set<String>
+    get() =
+        System.getenv("AGENDA_TRUSTED_PROXIES")
+            ?.split(",")
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            ?.toSet()
+            .orEmpty()
 
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
@@ -90,6 +104,7 @@ fun Application.agendaModule(
             password = System.getenv("AGENDA_SMTP_PASSWORD"),
             from = System.getenv("AGENDA_SMTP_FROM"),
         ),
+    trustedProxies: Set<String> = trustedProxiesFromEnv,
 ) {
     DatabaseFactory.init(jdbcUrl)
 
@@ -124,14 +139,7 @@ fun Application.agendaModule(
         allowHeader("Authorization")
     }
 
-    install(RateLimit) {
-        // Sin esta clave el limite seria un unico cubo global para todo el proceso: un solo
-        // cliente agotaria las 10 peticiones y bloquearia a el resto de usuarios durante 60s.
-        register(RateLimitName("auth")) {
-            rateLimiter(limit = 10, refillPeriod = 60.seconds)
-            requestKey { call -> call.request.origin.remoteHost }
-        }
-    }
+    installAuthRateLimit(trustedProxies)
 
     install(StatusPages) {
         exception<Throwable> { call, cause ->
@@ -155,5 +163,27 @@ fun Application.agendaModule(
         authRoutes(userRepository, jwtConfig, passwordResetRepository, emailSender)
         userRoutes(userRepository, fcmTokenRepository)
         taskRoutes(taskRepository)
+    }
+}
+
+/**
+ * Sin la clave por IP el limite seria un unico cubo global para todo el proceso: un solo
+ * cliente agotaria las 10 peticiones y bloquearia al resto de usuarios durante 60s.
+ * [resolveClientAddress] nunca se fia a ciegas de `X-Forwarded-For` (cualquiera podria
+ * mandarla): solo la lee si la conexion llega de verdad de un proxy en [trustedProxies]; sin
+ * proxies configurados, usa siempre la conexion TCP real, igual que antes de este fix.
+ */
+private fun Application.installAuthRateLimit(trustedProxies: Set<String>) {
+    install(RateLimit) {
+        register(RateLimitName("auth")) {
+            rateLimiter(limit = 10, refillPeriod = 60.seconds)
+            requestKey { call ->
+                resolveClientAddress(
+                    directRemoteHost = call.request.local.remoteHost,
+                    forwardedForHeader = call.request.headers["X-Forwarded-For"],
+                    trustedProxies = trustedProxies,
+                )
+            }
+        }
     }
 }
