@@ -10,7 +10,9 @@ documento es el "qué se ha hecho, qué falta y cómo se arranca" sobre esa base
 días completas y verificadas pero sin integrar; arreglado el bug del calendario centrado
 (sección 7septies); cerrados además dos huecos de seguridad documentados desde antes: rate
 limiting seguro detrás de proxy inverso y borrado del token FCM al hacer logout (sección
-7octies)).
+7octies); y arreglado el CI de GitHub Actions, que fallaba siempre al descargar Gradle
+(sección 7novies). Sesión cerrada con el working tree limpio y `main` al día con
+`origin/main`.
 
 ## 0. Resumen en una frase
 
@@ -646,6 +648,26 @@ Verificación de esta sesión:
   `install(RateLimit)` a una función privada `installAuthRateLimit()` (mismo patrón que
   `startReminderLoop`) y cambiando `?: emptySet()` por `.orEmpty()`. Repetido ->
   **BUILD SUCCESSFUL**.
+
+## 7novies. Sesión 6 (2026-09-17): CI de GitHub Actions arreglado (fallaba desde que se creó)
+
+- El workflow `.github/workflows/ci.yml` (sección 3 del plan `calidad-seguridad-recordatorios`)
+  nunca había llegado a pasar en un runner limpio: `gradle/wrapper/gradle-wrapper.properties`
+  tenía `distributionSha256Sum` **vacío** desde el primer commit del repo. En local nunca se
+  notó porque el wrapper ya tenía la distribución de Gradle 8.13 en la cache; en un runner sin
+  cache, el wrapper descarga el zip y compara su checksum contra ese campo — vacío no significa
+  "no verificar", significa "el checksum esperado es la cadena vacía", así que la verificación
+  fallaba siempre con "Your Gradle distribution may have been tampered with", aunque la
+  descarga fuera legítima.
+- Verificado que la descarga SÍ era legítima antes de tocar nada: el checksum real que reportó
+  el error de CI (`20f1b117...`) coincide exactamente con el publicado en
+  `https://downloads.gradle.org/distributions/gradle-8.13-bin.zip.sha256`.
+- Arreglado rellenando `distributionSha256Sum` con ese valor. `./gradlew --version` confirmado
+  en local tras el cambio (sigue funcionando).
+- Pendiente de confirmar en el propio GitHub Actions (el push ya está hecho, `main` en
+  `2cb2d0d`): la próxima vez que corra el workflow debería pasar el paso de descarga de Gradle;
+  si sigue fallando, revisar si hay algo más en el runner (versión de Java, etc.) antes de
+  tocar de nuevo el wrapper.
 
 ## 8. Producción: URL y certificate pinning (infraestructura lista, sin dominio real)
 
