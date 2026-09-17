@@ -7,8 +7,10 @@ documento es el "qué se ha hecho, qué falta y cómo se arranca" sobre esa base
 
 Última actualización: 2026-09-17 (sesión 6: fusionadas a `main` las ramas
 `worktree-calidad-seguridad-recordatorios` y `feature/recuperacion-password`, que llevaban
-días completas y verificadas pero sin integrar; arreglado además el bug del calendario
-centrado, ver sección 7septies).
+días completas y verificadas pero sin integrar; arreglado el bug del calendario centrado
+(sección 7septies); cerrados además dos huecos de seguridad documentados desde antes: rate
+limiting seguro detrás de proxy inverso y borrado del token FCM al hacer logout (sección
+7octies)).
 
 ## 0. Resumen en una frase
 
@@ -607,6 +609,44 @@ Verificación de esta sesión:
   completo pendiente de confirmar en esta misma sesión tras el fix (ver el resultado real
   antes de asumir que sigue en verde).
 
+## 7octies. Sesión 6 (2026-09-17): rate limiting tras proxy inverso + borrado del token FCM al logout
+
+- **Rate limiting seguro detrás de un proxy inverso**: `resolveClientAddress`
+  (`server/.../security/ClientAddressResolver.kt`, función pura con 6 tests) decide la IP a
+  usar como clave del `rateLimit("auth")`. Sin `AGENDA_TRUSTED_PROXIES` configurada (por
+  defecto), el comportamiento es idéntico al de antes: siempre la conexión TCP real
+  (`call.request.local.remoteHost`). Con esa variable (lista de IPs separadas por comas), si
+  la conexión llega justo de una de esas IPs se lee el primer valor de `X-Forwarded-For` (el
+  cliente original); si no, la cabecera se ignora por completo — nunca se confía en ella
+  viniendo de un origen que no sea el proxy propio, para que un cliente cualquiera no pueda
+  suplantar la IP de otro y esquivar su cupo. `agendaModule()` gana el parámetro
+  `trustedProxies` (mismo patrón que `jdbcUrl`/`emailSender`) para poder probarlo de verdad
+  con `withApi(trustedProxies = ...)`: test de integración nuevo en `AuthRoutesTest.kt` que
+  agota el cupo de un cliente vía `X-Forwarded-For: 1.1.1.1` y comprueba que otro cliente
+  (`2.2.2.2`) detrás del mismo proxy simulado sigue con su cupo intacto.
+  - Nota para producción: esto asume que el proxy **sobrescribe** `X-Forwarded-For` en vez de
+    anexarlo (`proxy_set_header X-Forwarded-For $remote_addr;` en nginx, no
+    `$proxy_add_x_forwarded_for`); si el proxy anexa, un cliente podría colar un primer valor
+    falso antes de que el proxy añada el suyo.
+- **El token FCM se borra del servidor al hacer logout**: nueva ruta autenticada
+  `DELETE /users/me/fcm-token` (`FcmTokenRoutesTest`, +4 tests) y
+  `FcmTokenRepository.delete(userId, token)` (borrado idempotente, sin error si no existía).
+  `TokenProvider` (`core/network`) gana `fcmToken()`/`saveFcmToken(token)` — el mismo
+  almacenamiento cifrado que ya guardaba los tokens de sesión, ahora también recuerda el
+  último token FCM registrado por este dispositivo; `clear()` también lo borra.
+  `AuthRepositoryImpl.registerFcmToken()` lo persiste ahí tras registrarlo en el servidor;
+  `logout()` lo lee y, si había uno, pide al servidor que lo borre **antes** de limpiar
+  tokens — best effort con `runCatching` + `AgendaLogger.w` si falla (nunca bloquea el
+  logout). Cubierto con TDD en `AuthRepositoryImplTest` (4 tests nuevos: se guarda al
+  registrar, se borra en el servidor al hacer logout, no se llama al endpoint si no había
+  ninguno registrado, y el logout sigue limpiando todo aunque el borrado remoto falle).
+- `./gradlew check` -> **FAILED** en el primer intento: `:server:detektMain` con 2 issues
+  (`LongMethod` en `agendaModule`, que llegó justo a 60 líneas al añadir el parámetro
+  `trustedProxies`; `UseOrEmpty` en `trustedProxiesFromEnv`). Arreglado extrayendo el bloque
+  `install(RateLimit)` a una función privada `installAuthRateLimit()` (mismo patrón que
+  `startReminderLoop`) y cambiando `?: emptySet()` por `.orEmpty()`. Repetido ->
+  **BUILD SUCCESSFUL**.
+
 ## 8. Producción: URL y certificate pinning (infraestructura lista, sin dominio real)
 
 No hay todavía un backend desplegado en un dominio real, así que no hay pines de
@@ -678,31 +718,17 @@ Code con las tareas de arriba.
    credenciales reales**: sin un proyecto Firebase real, los recordatorios push funcionan
    solo hasta donde llega `NoOpPushSender`/la lógica probada con tests (ver sección
    7quinquies); nunca se ha mandado una notificación real a un dispositivo.
-7. **El token FCM no se borra al hacer logout**: `AuthRepositoryImpl.logout()` limpia los
-   tokens de sesión y Room, pero no llama a ningún `DELETE /users/me/fcm-token` (no existe
-   esa ruta) ni borra la fila de `FcmTokens`. Como `FcmTokens` tiene `PrimaryKey(userId,
-   token)`, el mismo token de dispositivo puede quedar asociado a más de un usuario a la vez;
-   si en el mismo dispositivo el usuario A cierra sesión y el usuario B inicia sesión,
-   `ReminderJob` seguiría mandando también los recordatorios de A a ese dispositivo. Hoy no es
-   explotable (sin credenciales Firebase reales ni permiso `POST_NOTIFICATIONS` concedido, el
-   push no llega a ningún sitio), pero hay que cerrarlo antes de activar push de verdad:
-   añadir la ruta de borrado + repositorio y llamarla desde `logout()`.
-8. **`ReminderScheduler` (servidor) trata todas las fechas/horas de tarea como UTC**: no hay
+7. **`ReminderScheduler` (servidor) trata todas las fechas/horas de tarea como UTC**: no hay
    ningún campo de zona horaria en `Task`/`Tasks`, así que un recordatorio puesto a las 09:00
    por un usuario en España puede dispararse una o dos horas más tarde/temprano en hora local
    según la época del año. Corregirlo de verdad necesita añadir un campo de zona horaria a la
    tarea (tocaría los cuatro sitios de la sección 3), fuera del alcance de lo hecho hasta
    ahora — hay que tenerlo en cuenta antes de dar por fiable la hora de un recordatorio push
    real.
-9. **El rate limiting de `/auth/*` filtra por `call.request.origin.remoteHost`**: correcto
-    mientras el servidor no esté detrás de un proxy inverso; si en el futuro se despliega
-    detrás de nginx/Cloudflare/similar sin más cambios, todas las peticiones verían la IP del
-    proxy como origen y compartirían el mismo cupo de 10 peticiones/60s — hay que añadir
-    entonces soporte de `X-Forwarded-For` con una lista de proxies de confianza (nunca
-    confiar en esa cabecera sin verificar quién la manda).
 
-(El punto "editar una tarea desde el calendario" que estaba aquí se resolvió en la sesión
-5, ver sección 7bis.)
+(Los puntos "editar una tarea desde el calendario", "regresión visual en el calendario", "el
+token FCM no se borra al hacer logout" y "el rate limiting no soporta proxy inverso" que
+estaban aquí se resolvieron en sesiones posteriores, ver secciones 7bis, 7septies y 7octies.)
 
 ## 11. Decisiones tomadas que conviene no deshacer sin pensarlo
 
