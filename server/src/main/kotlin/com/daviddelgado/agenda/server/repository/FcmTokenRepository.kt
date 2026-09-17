@@ -3,6 +3,7 @@ package com.daviddelgado.agenda.server.repository
 import com.daviddelgado.agenda.server.db.FcmTokens
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -36,4 +37,14 @@ class FcmTokenRepository {
         transaction {
             FcmTokens.selectAll().where { FcmTokens.userId eq userId }.map { it[FcmTokens.token] }
         }
+
+    /** Sin efecto si el token no estaba registrado para este usuario (borrado idempotente). */
+    fun delete(
+        userId: String,
+        token: String,
+    ) {
+        transaction {
+            FcmTokens.deleteWhere { (FcmTokens.userId eq userId) and (FcmTokens.token eq token) }
+        }
+    }
 }

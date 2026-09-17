@@ -1,5 +1,6 @@
 package com.daviddelgado.agenda.data.auth
 
+import com.daviddelgado.agenda.common.logging.AgendaLogger
 import com.daviddelgado.agenda.database.PendingDeletionDao
 import com.daviddelgado.agenda.database.TaskDao
 import com.daviddelgado.agenda.domain.model.User
@@ -9,6 +10,8 @@ import com.daviddelgado.agenda.network.api.AuthApi
 import com.daviddelgado.agenda.network.dto.AuthResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+
+private const val LOG_TAG = "AuthRepository"
 
 /**
  * Habla con `/auth` y `/users` del modulo :server a traves de [AuthApi] y guarda el par de
@@ -37,6 +40,7 @@ class AuthRepositoryImpl(
     ): Result<User> = runCatching { onAuthSuccess(authApi.register(name, email, password)) }
 
     override suspend fun logout() {
+        unregisterFcmTokenIfAny()
         tokenProvider.clear()
         authApi.forgetCachedTokens()
         currentUser.value = null
@@ -62,7 +66,14 @@ class AuthRepositoryImpl(
             .getOrNull()
     }
 
-    override suspend fun registerFcmToken(token: String): Result<Unit> = runCatching { authApi.registerFcmToken(token) }
+    override suspend fun registerFcmToken(token: String): Result<Unit> =
+        runCatching {
+            authApi.registerFcmToken(token)
+            // Guardado para poder desasociarlo del usuario actual al hacer logout (ver
+            // unregisterFcmTokenIfAny): sin esto, el mismo dispositivo seguiria recibiendo
+            // los recordatorios de este usuario despues de que otro inicie sesion en el.
+            tokenProvider.saveFcmToken(token)
+        }
 
     override suspend fun requestPasswordReset(email: String): Result<Unit> =
         runCatching { authApi.forgotPassword(email) }
@@ -80,6 +91,17 @@ class AuthRepositoryImpl(
             authApi.forgetCachedTokens()
             currentUser.value = null
         }
+
+    /**
+     * Mejor esfuerzo: si falla (sin red, servidor caido) el logout sigue igual, solo queda
+     * en el log. El token seguiria asociado en el servidor hasta el proximo intento, pero
+     * nunca bloquea que el usuario cierre sesion.
+     */
+    private suspend fun unregisterFcmTokenIfAny() {
+        val token = tokenProvider.fcmToken() ?: return
+        runCatching { authApi.unregisterFcmToken(token) }
+            .onFailure { AgendaLogger.w(LOG_TAG, "No se pudo borrar el token FCM al cerrar sesion", it) }
+    }
 
     private suspend fun clearLocalData() {
         taskDao.deleteAll()

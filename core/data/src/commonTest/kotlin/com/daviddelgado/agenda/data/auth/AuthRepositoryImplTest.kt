@@ -125,6 +125,55 @@ class AuthRepositoryImplTest {
         }
 
     @Test
+    fun registrarUnTokenFcmLoGuardaLocalmenteParaPoderBorrarloAlCerrarSesion() =
+        runTest {
+            val tokens = FakeTokenProvider()
+            val repository = repositorio(tokens, status = HttpStatusCode.NoContent, body = "")
+
+            repository.registerFcmToken("token-dispositivo")
+
+            assertEquals("token-dispositivo", tokens.savedFcmToken)
+        }
+
+    @Test
+    fun cerrarSesionBorraEnElServidorElTokenFcmSiHabiaUnoRegistrado() =
+        runTest {
+            val tokens = FakeTokenProvider("access", "refresh", fcm = "token-dispositivo")
+            val repository = repositorio(tokens, status = HttpStatusCode.NoContent, body = "")
+
+            repository.logout()
+
+            assertTrue(llamadas.contains("DELETE /users/me/fcm-token"))
+        }
+
+    @Test
+    fun cerrarSesionSinTokenFcmRegistradoNoLlamaAlEndpointDeBorrado() =
+        runTest {
+            val tokens = FakeTokenProvider("access", "refresh")
+            val repository = repositorio(tokens, status = HttpStatusCode.NoContent, body = "")
+
+            repository.logout()
+
+            assertTrue(llamadas.none { it == "DELETE /users/me/fcm-token" })
+        }
+
+    @Test
+    fun cerrarSesionLimpiaTokensAunqueFalleElBorradoDelTokenFcm() =
+        runTest {
+            val tokens = FakeTokenProvider("access", "refresh", fcm = "token-dispositivo")
+            val client =
+                mockHttpClient(tokens) { request ->
+                    llamadas += "${request.method.value} /${request.url.encodedPath.trimStart('/')}"
+                    respondJson("", HttpStatusCode.InternalServerError)
+                }
+            val repository = AuthRepositoryImpl(AuthApi(client), tokens, FakeTaskDao(), FakePendingDeletionDao())
+
+            repository.logout()
+
+            assertTrue(tokens.cleared)
+        }
+
+    @Test
     fun borrarLaCuentaBorraServidorTokensYTareasLocales() =
         runTest {
             val tokens = FakeTokenProvider("access", "refresh")

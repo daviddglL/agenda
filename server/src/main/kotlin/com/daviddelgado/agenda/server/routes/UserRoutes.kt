@@ -48,6 +48,16 @@ fun Route.userRoutes(
             fcmTokenRepository.upsert(call.requireUserId(), request.token)
             call.respond(HttpStatusCode.NoContent)
         }
+
+        // Al hacer logout el cliente borra su asociacion con este usuario (ver
+        // AuthRepositoryImpl.logout()): sin esto, el mismo dispositivo podia quedar recibiendo
+        // los recordatorios de dos usuarios distintos tras cerrar sesion e iniciar con otro.
+        delete("/users/me/fcm-token") {
+            val request = call.receive<FcmTokenRequest>()
+            if (respondIfInvalid(request)) return@delete
+            fcmTokenRepository.delete(call.requireUserId(), request.token)
+            call.respond(HttpStatusCode.NoContent)
+        }
     }
 }
 

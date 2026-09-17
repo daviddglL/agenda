@@ -31,5 +31,11 @@ interface TokenProvider {
         refreshToken: String,
     )
 
+    /** Ultimo token FCM que este dispositivo registro en el servidor para este usuario. */
+    suspend fun fcmToken(): String?
+
+    fun saveFcmToken(token: String)
+
+    /** Borra tokens de sesion y el token FCM guardado (logout/borrado de cuenta). */
     fun clear()
 }

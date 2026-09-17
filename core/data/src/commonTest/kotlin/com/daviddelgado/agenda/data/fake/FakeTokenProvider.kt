@@ -6,12 +6,14 @@ import com.daviddelgado.agenda.network.TokenProvider
 class FakeTokenProvider(
     private var access: String? = null,
     private var refresh: String? = null,
+    private var fcm: String? = null,
 ) : TokenProvider {
     var cleared = false
         private set
 
     val savedAccessToken: String? get() = access
     val savedRefreshToken: String? get() = refresh
+    val savedFcmToken: String? get() = fcm
 
     override suspend fun accessToken(): String? = access
 
@@ -25,9 +27,16 @@ class FakeTokenProvider(
         refresh = refreshToken
     }
 
+    override suspend fun fcmToken(): String? = fcm
+
+    override fun saveFcmToken(token: String) {
+        fcm = token
+    }
+
     override fun clear() {
         access = null
         refresh = null
+        fcm = null
         cleared = true
     }
 }

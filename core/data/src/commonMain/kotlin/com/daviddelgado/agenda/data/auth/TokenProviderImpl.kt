@@ -5,6 +5,7 @@ import com.daviddelgado.agenda.network.TokenProvider
 
 private const val KEY_ACCESS_TOKEN = "access_token"
 private const val KEY_REFRESH_TOKEN = "refresh_token"
+private const val KEY_FCM_TOKEN = "fcm_token"
 
 /** Guarda los tokens en almacenamiento cifrado (EncryptedSharedPreferences / Keychain). */
 class TokenProviderImpl(private val secureStorage: SecureStorage) : TokenProvider {
@@ -20,8 +21,15 @@ class TokenProviderImpl(private val secureStorage: SecureStorage) : TokenProvide
         secureStorage.putString(KEY_REFRESH_TOKEN, refreshToken)
     }
 
+    override suspend fun fcmToken(): String? = secureStorage.getString(KEY_FCM_TOKEN)
+
+    override fun saveFcmToken(token: String) {
+        secureStorage.putString(KEY_FCM_TOKEN, token)
+    }
+
     override fun clear() {
         secureStorage.remove(KEY_ACCESS_TOKEN)
         secureStorage.remove(KEY_REFRESH_TOKEN)
+        secureStorage.remove(KEY_FCM_TOKEN)
     }
 }

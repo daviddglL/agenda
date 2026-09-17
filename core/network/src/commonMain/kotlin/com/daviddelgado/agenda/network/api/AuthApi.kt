@@ -61,6 +61,16 @@ class AuthApi(private val client: HttpClient) {
         }
     }
 
+    /** Desasocia este token FCM del usuario actual (logout, ver AuthRepositoryImpl). */
+    suspend fun unregisterFcmToken(token: String) {
+        apiCall {
+            client.delete("users/me/fcm-token") {
+                contentType(ContentType.Application.Json)
+                setBody(FcmTokenRequest(token))
+            }
+        }
+    }
+
     suspend fun forgotPassword(email: String) {
         apiCall {
             client.post("auth/forgot-password") {
