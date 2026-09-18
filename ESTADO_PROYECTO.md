@@ -5,7 +5,12 @@ decisiones ya tomadas para no repetir trabajo ni contradecirlas sin querer. La s
 técnica obligatoria (no negociable) sigue estando en [markdown.md](markdown.md); este
 documento es el "qué se ha hecho, qué falta y cómo se arranca" sobre esa base.
 
-Última actualización: 2026-09-17 (sesión 6, continuada: fusionadas a `main` las ramas
+Última actualización: 2026-09-18 (sesión 7: revisión completa de código, seguridad y
+consistencia de la documentación pedida por el usuario sin partir de un bug concreto —
+sección 7duodecies. Arreglados: CORS abierto a cualquier origen, `AGENDA_JWT_SECRET` sin
+aviso si falta, callback de permiso `POST_NOTIFICATIONS` que ignoraba el resultado, Keychain
+de iOS sin flag de accesibilidad explícito, y dos desajustes menores de esta misma
+documentación. Sesión anterior (6, 2026-09-17): fusionadas a `main` las ramas
 `worktree-calidad-seguridad-recordatorios` y `feature/recuperacion-password`, que llevaban
 días completas y verificadas pero sin integrar; arreglado el bug del calendario centrado
 (sección 7septies); cerrados dos huecos de seguridad documentados desde antes: rate limiting
@@ -14,7 +19,7 @@ arreglado el CI de GitHub Actions, que fallaba siempre al descargar Gradle (secc
 pedido de verdad el permiso `POST_NOTIFICATIONS` en tiempo de ejecución, verificado en
 caliente en el emulador (sección 7decies); y conectadas credenciales reales de Firebase, con
 un push de verdad recibido en el dispositivo por primera vez en todo el proyecto (sección
-7undecies). Working tree limpio y `main` al día con `origin/main`.
+7undecies).
 
 ## 0. Resumen en una frase
 
@@ -726,6 +731,43 @@ Verificación de esta sesión:
   necesitará su propia forma de proveer `AGENDA_FIREBASE_SERVICE_ACCOUNT_JSON` (variable de
   entorno del hosting, no un fichero en el repo) igual que ya se hace en local.
 
+## 7duodecies. Sesión 7 (2026-09-18): revisión completa de código, seguridad y documentación
+
+Revisión pedida explícitamente por el usuario, sin partir de un bug concreto: código completo,
+últimos 5 commits (hasta `3d420cf`) y consistencia de este documento con el código real.
+
+- **CORS abierto a cualquier origen** (`server/.../Application.kt`, `install(CORS) { anyHost() }`):
+  como la API no tiene ningún cliente web (solo Android/iOS nativos, no sujetos a CORS), se
+  sustituyó por una lista de hosts configurable vía `AGENDA_CORS_ALLOWED_ORIGINS` (mismo patrón
+  que `AGENDA_TRUSTED_PROXIES`), vacía por defecto = ningún origen de navegador permitido.
+  `agendaModule()` gana el parámetro `allowedOrigins`, `withApi()` (tests) también. Cubierto por
+  `CorsTest.kt` nuevo (2 tests: un origen no listado no recibe `Access-Control-Allow-Origin`, uno
+  listado sí).
+- **`AGENDA_JWT_SECRET` sin aviso si falta**: antes, si la variable no estaba fijada, el servidor
+  arrancaba en silencio con el secreto de desarrollo hardcodeado — ahora deja un `logger.warn`
+  explícito al arrancar (mismo patrón que los placeholders de `ProductionConfig`/`PushSender`).
+  Sigue sin fallar el arranque a propósito (no rompe el desarrollo local sin la variable puesta).
+- **`MainActivity.kt`** (permiso `POST_NOTIFICATIONS`, sección 7decies): el callback de
+  `rememberLauncherForActivityResult` ignoraba el resultado; ahora lo deja en log
+  (`AgendaLogger.d`, concedido/denegado). Corregido también el comentario que sobrevendía la
+  garantía de que `launch()` no repite el diálogo tras una denegación (solo deja de mostrarlo
+  tras la segunda denegación o "No volver a preguntar").
+- **Keychain de iOS sin `kSecAttrAccessible` explícito** (`core/data/.../SecureStorage.ios.kt`):
+  fijado a `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` para que los tokens de sesión/FCM no
+  viajen en backups ni en iCloud Keychain. Sin compilar en Xcode todavía (mismo gap de siempre,
+  sección 10 punto 1).
+- **Documentación**: corregido `LongParameterList` de "9/9" a "9/10" en la sección 11 (el código
+  ya estaba en 9/10 desde la sesión 5, sección 7quater, solo no se había propagado aquí) y
+  añadido el punto 6 de la sección 10 (recordatorios `PERSONALIZADO`/`UNA_VEZ` sin repetición).
+- **Sin hallazgos nuevos** en: `ProductionConfig` (placeholders ya conocidos), almacenamiento
+  cifrado de tokens en Android, `google-services.json` (credenciales reales intencionalmente
+  versionadas), rate limiting tras proxy inverso, `.gitignore`, `network_security_config.xml`,
+  ni en los commits de checksum de Gradle y credenciales de Firebase (ambos correctos, sin
+  secretos filtrados). Los 5 puntos previos de la sección 10 y el modelo de dominio (sección 3)
+  se confirmaron vigentes y fieles al código.
+- Pendiente de esta sesión: correr `./gradlew check` completo tras estos cambios y confirmarlo
+  aquí (ver la nota de verificación al cierre de esta sección si se ha llegado a ejecutar).
+
 ## 8. Producción: URL y certificate pinning (infraestructura lista, sin dominio real)
 
 No hay todavía un backend desplegado en un dominio real, así que no hay pines de
@@ -794,6 +836,12 @@ Code con las tareas de arriba.
    tarea (tocaría los cuatro sitios de la sección 3), fuera del alcance de lo hecho hasta
    ahora — hay que tenerlo en cuenta antes de dar por fiable la hora de un recordatorio push
    real.
+6. **Los recordatorios `PERSONALIZADO`/`UNA_VEZ` no se repiten tras el primer envío**:
+   `ReminderScheduler` no tiene ningún campo de intervalo propio para esas dos frecuencias, así
+   que una vez enviado el push una vez no se vuelve a mandar (a diferencia de `DIARIO`/
+   `SEMANAL`/`MENSUAL`, que sí recalculan la próxima ocurrencia). Detectado en la revisión de
+   código de la sesión 7; no se ha decidido todavía si `PERSONALIZADO` necesita un campo de
+   intervalo nuevo o si es el comportamiento esperado (recordatorio de una sola vez).
 
 (Los puntos "editar una tarea desde el calendario", "regresión visual en el calendario", "el
 token FCM no se borra al hacer logout", "el rate limiting no soporta proxy inverso", "no se
@@ -829,6 +877,6 @@ se resolvieron en sesiones posteriores, ver secciones 7bis, 7septies, 7octies, 7
 - **ktlint y detekt en verde en todos los módulos**: excluyen el código generado por
   KSP/Compose Resources vía `.editorconfig` y excludes de Gradle. En
   `config/detekt/detekt.yml`, `TooManyFunctions` está en 20 (DAOs/repositorios con muchas
-  consultas) y `LongParameterList` en 9/9 función/constructor — ojo, **el compilador de
+  consultas) y `LongParameterList` en 9/10 función/constructor — ojo, **el compilador de
   Compose añade un parámetro implícito a las funciones `@Composable`**, así que un
   composable con N parámetros declarados necesita `functionThreshold >= N+1`, no `N`.
