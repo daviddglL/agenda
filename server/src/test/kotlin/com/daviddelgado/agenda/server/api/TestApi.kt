@@ -28,6 +28,7 @@ import kotlin.random.Random
 fun withApi(
     emailSender: EmailSender = NoOpEmailSender,
     trustedProxies: Set<String> = emptySet(),
+    allowedOrigins: Set<String> = emptySet(),
     block: suspend ApplicationTestBuilder.(HttpClient) -> Unit,
 ) = testApplication {
     val databaseName = "agenda-test-${Random.nextLong()}"
@@ -36,6 +37,7 @@ fun withApi(
             "jdbc:h2:mem:$databaseName;DB_CLOSE_DELAY=-1",
             emailSender = emailSender,
             trustedProxies = trustedProxies,
+            allowedOrigins = allowedOrigins,
         )
     }
     val client =

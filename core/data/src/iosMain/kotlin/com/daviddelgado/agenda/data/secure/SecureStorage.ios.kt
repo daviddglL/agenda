@@ -16,6 +16,8 @@ import platform.Security.SecItemAdd
 import platform.Security.SecItemCopyMatching
 import platform.Security.SecItemDelete
 import platform.Security.errSecSuccess
+import platform.Security.kSecAttrAccessible
+import platform.Security.kSecAttrAccessibleWhenUnlockedThisDeviceOnly
 import platform.Security.kSecAttrAccount
 import platform.Security.kSecAttrService
 import platform.Security.kSecClass
@@ -49,7 +51,12 @@ actual class SecureStorage {
         val query = baseQuery(key)
         @Suppress("UNCHECKED_CAST")
         SecItemDelete(query as CFDictionaryRef)
-        val newItem = query + mapOf<Any?, Any?>(kSecValueData to data)
+        val newItem =
+            query +
+                mapOf<Any?, Any?>(
+                    kSecValueData to data,
+                    kSecAttrAccessible to kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+                )
         @Suppress("UNCHECKED_CAST")
         SecItemAdd(newItem as CFDictionaryRef, null)
     }

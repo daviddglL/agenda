@@ -40,10 +40,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import kotlin.time.Duration.Companion.seconds
 
 /** Cada cuanto se hace ping/timeout de los WebSockets de `/tasks/ws` (ver TaskEventBroadcaster). */
 private const val WEBSOCKET_PING_TIMEOUT_MILLIS = 15_000L
+
+private val logger: Logger = LoggerFactory.getLogger("Application")
 
 /** H2 en fichero por defecto; `AGENDA_DB_URL` permite apuntar a otra base (p.ej. Postgres). */
 private val defaultJdbcUrl: String
@@ -57,6 +61,21 @@ private val defaultJdbcUrl: String
 private val trustedProxiesFromEnv: Set<String>
     get() =
         System.getenv("AGENDA_TRUSTED_PROXIES")
+            ?.split(",")
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            ?.toSet()
+            .orEmpty()
+
+/**
+ * Hosts (sin esquema, p.ej. "app.midominio.com") desde los que un navegador puede llamar a la
+ * API por CORS, separados por comas. Vacio por defecto: la API no tiene ningun cliente web
+ * (solo Android/iOS nativos, que no estan sujetos a CORS), asi que sin configurar esta variable
+ * ningun origen de navegador puede usar las cabeceras de sesion via CORS.
+ */
+private val corsAllowedOriginsFromEnv: Set<String>
+    get() =
+        System.getenv("AGENDA_CORS_ALLOWED_ORIGINS")
             ?.split(",")
             ?.map { it.trim() }
             ?.filter { it.isNotEmpty() }
@@ -93,6 +112,10 @@ private fun startReminderLoop(dispatcher: CoroutineDispatcher = Dispatchers.IO) 
 /**
  * @param jdbcUrl base de datos a usar. Los tests pasan una H2 en memoria distinta por test
  * para no compartir estado entre ellos ni tocar el fichero de desarrollo.
+ * @param allowedOrigins hosts (sin esquema) permitidos por CORS. Vacio por defecto: la API no
+ * tiene cliente web, asi que sin configurar `AGENDA_CORS_ALLOWED_ORIGINS` ningun navegador
+ * puede usarla via CORS (los clientes nativos Android/iOS no se ven afectados, CORS solo lo
+ * aplican los navegadores).
  */
 fun Application.agendaModule(
     jdbcUrl: String = defaultJdbcUrl,
@@ -105,13 +128,20 @@ fun Application.agendaModule(
             from = System.getenv("AGENDA_SMTP_FROM"),
         ),
     trustedProxies: Set<String> = trustedProxiesFromEnv,
+    allowedOrigins: Set<String> = corsAllowedOriginsFromEnv,
 ) {
     DatabaseFactory.init(jdbcUrl)
 
     // En desarrollo se usa un secreto por defecto; en produccion SIEMPRE se debe fijar
     // la variable de entorno AGENDA_JWT_SECRET con un valor largo y aleatorio propio.
-    val jwtConfig =
-        JwtConfig(secret = System.getenv("AGENDA_JWT_SECRET") ?: "dev-secret-change-me-in-production")
+    val jwtSecretFromEnv = System.getenv("AGENDA_JWT_SECRET")
+    if (jwtSecretFromEnv == null) {
+        logger.warn(
+            "AGENDA_JWT_SECRET no esta fijada: usando el secreto de desarrollo hardcodeado. " +
+                "Si esto es produccion, cualquiera que conozca el codigo fuente puede forjar tokens validos.",
+        )
+    }
+    val jwtConfig = JwtConfig(secret = jwtSecretFromEnv ?: "dev-secret-change-me-in-production")
     val userRepository = UserRepository()
     val taskRepository = TaskRepository()
     val fcmTokenRepository = FcmTokenRepository()
@@ -134,7 +164,7 @@ fun Application.agendaModule(
     }
 
     install(CORS) {
-        anyHost()
+        allowedOrigins.forEach { host -> allowHost(host, schemes = listOf("http", "https")) }
         allowHeader("Content-Type")
         allowHeader("Authorization")
     }
