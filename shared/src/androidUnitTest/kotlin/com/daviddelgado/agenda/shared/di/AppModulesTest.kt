@@ -48,5 +48,6 @@ class AppModulesTest {
         val koin = koinApplication { modules(appModules) }.koin
         assertEquals(1, koin.definitionsDeclaring(TokenProviderImpl::class))
         assertEquals(1, koin.definitionsDeclaring(TokenProvider::class))
+        assertEquals(1, koin.definitionsDeclaringAll(TokenProviderImpl::class, TokenProvider::class))
     }
 }

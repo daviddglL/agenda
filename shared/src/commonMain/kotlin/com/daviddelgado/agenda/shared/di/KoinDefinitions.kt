@@ -30,3 +30,10 @@ fun Koin.declaredTypes(): Set<KClass<*>> =
 /** Numero de definiciones (no de claves del registro) que declaran [type] como primario o enlazado. */
 fun Koin.definitionsDeclaring(type: KClass<*>): Int =
     beanDefinitions().count { type == it.primaryType || type in it.secondaryTypes }
+
+/** Numero de definiciones que declaran TODOS los [types] a la vez (primario o enlazados). */
+fun Koin.definitionsDeclaringAll(vararg types: KClass<*>): Int =
+    beanDefinitions().count {
+            definition ->
+        types.all { it == definition.primaryType || it in definition.secondaryTypes }
+    }
