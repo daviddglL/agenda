@@ -3,12 +3,6 @@ package com.daviddelgado.agenda.domain.model
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 
-data class User(
-    val id: String,
-    val name: String,
-    val email: String,
-)
-
 /** Categoria de la tarea, elegida por el usuario de un conjunto cerrado. */
 enum class TaskCategory {
     TRABAJO,

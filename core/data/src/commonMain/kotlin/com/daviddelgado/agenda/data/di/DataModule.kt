@@ -1,16 +1,13 @@
 package com.daviddelgado.agenda.data.di
 
-import com.daviddelgado.agenda.data.auth.AuthRepositoryImpl
 import com.daviddelgado.agenda.data.auth.TokenProviderImpl
 import com.daviddelgado.agenda.data.streak.StreakRepositoryImpl
 import com.daviddelgado.agenda.data.task.TaskRepositoryImpl
 import com.daviddelgado.agenda.database.AgendaDatabase
 import com.daviddelgado.agenda.database.buildAgendaDatabase
-import com.daviddelgado.agenda.domain.repository.AuthRepository
 import com.daviddelgado.agenda.domain.repository.StreakRepository
 import com.daviddelgado.agenda.domain.repository.TaskRepository
 import com.daviddelgado.agenda.network.TokenProvider
-import com.daviddelgado.agenda.network.api.AuthApi
 import com.daviddelgado.agenda.network.api.TaskApi
 import com.daviddelgado.agenda.network.createHttpClient
 import org.koin.core.module.Module
@@ -30,7 +27,6 @@ val dataModule =
         single { TokenProviderImpl(get()) }
         single<TokenProvider> { get<TokenProviderImpl>() }
         single { createHttpClient(get(), get()) }
-        single { AuthApi(get()) }
         single { TaskApi(get()) }
 
         single { buildAgendaDatabase(get()) }
@@ -39,5 +35,4 @@ val dataModule =
 
         single<TaskRepository> { TaskRepositoryImpl(get(), get(), get()) }
         single<StreakRepository> { StreakRepositoryImpl(get()) }
-        single<AuthRepository> { AuthRepositoryImpl(get(), get(), get(), get()) }
     }

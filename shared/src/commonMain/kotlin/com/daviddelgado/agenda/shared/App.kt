@@ -24,12 +24,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.daviddelgado.agenda.designsystem.theme.AgendaTheme
+import com.daviddelgado.agenda.feature.auth.presentation.forgotpassword.ForgotPasswordScreen
+import com.daviddelgado.agenda.feature.auth.presentation.login.LoginScreen
+import com.daviddelgado.agenda.feature.auth.presentation.register.RegisterScreen
+import com.daviddelgado.agenda.feature.auth.presentation.resetpassword.ResetPasswordScreen
+import com.daviddelgado.agenda.feature.auth.presentation.settings.SettingsScreen
 import com.daviddelgado.agenda.feature.calendar.CalendarScreen
-import com.daviddelgado.agenda.feature.login.LoginScreen
-import com.daviddelgado.agenda.feature.passwordreset.ForgotPasswordScreen
-import com.daviddelgado.agenda.feature.passwordreset.ResetPasswordScreen
-import com.daviddelgado.agenda.feature.register.RegisterScreen
-import com.daviddelgado.agenda.feature.settings.SettingsScreen
 import com.daviddelgado.agenda.feature.streaks.StreaksScreen
 import com.daviddelgado.agenda.feature.tasks.TasksScreen
 import kotlinx.coroutines.delay

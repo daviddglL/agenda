@@ -1,10 +1,10 @@
 package com.daviddelgado.agenda.shared
 
-import com.daviddelgado.agenda.domain.model.User
-import com.daviddelgado.agenda.domain.repository.AuthRepository
-import com.daviddelgado.agenda.domain.usecase.RegisterFcmTokenUseCase
-import com.daviddelgado.agenda.domain.usecase.RestoreSessionUseCase
-import com.daviddelgado.agenda.feature.login.FcmTokenProvider
+import com.daviddelgado.agenda.feature.auth.domain.fcm.FcmTokenProvider
+import com.daviddelgado.agenda.feature.auth.domain.model.User
+import com.daviddelgado.agenda.feature.auth.domain.repository.AuthRepository
+import com.daviddelgado.agenda.feature.auth.domain.usecase.RegisterFcmTokenUseCase
+import com.daviddelgado.agenda.feature.auth.domain.usecase.RestoreSessionUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest

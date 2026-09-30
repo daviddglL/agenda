@@ -1,10 +1,10 @@
 package com.daviddelgado.agenda.shared
 
 import com.daviddelgado.agenda.common.logging.AgendaLogger
-import com.daviddelgado.agenda.domain.model.User
-import com.daviddelgado.agenda.domain.usecase.RegisterFcmTokenUseCase
-import com.daviddelgado.agenda.domain.usecase.RestoreSessionUseCase
-import com.daviddelgado.agenda.feature.login.FcmTokenProvider
+import com.daviddelgado.agenda.feature.auth.domain.fcm.FcmTokenProvider
+import com.daviddelgado.agenda.feature.auth.domain.model.User
+import com.daviddelgado.agenda.feature.auth.domain.usecase.RegisterFcmTokenUseCase
+import com.daviddelgado.agenda.feature.auth.domain.usecase.RestoreSessionUseCase
 
 private const val LOG_TAG = "SplashSessionHandler"
 
