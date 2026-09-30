@@ -4,6 +4,8 @@ import com.daviddelgado.agenda.core.data.networking.createHttpClient
 import com.daviddelgado.agenda.core.data.session.TokenProvider
 import com.daviddelgado.agenda.core.data.session.TokenProviderImpl
 import org.koin.core.module.Module
+import org.koin.core.module.dsl.bind
+import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 
 /**
@@ -17,7 +19,6 @@ val coreDataModule =
     module {
         includes(platformCoreDataModule)
 
-        single { TokenProviderImpl(get()) }
-        single<TokenProvider> { get<TokenProviderImpl>() }
+        singleOf(::TokenProviderImpl) { bind<TokenProvider>() }
         single { createHttpClient(get(), get()) }
     }

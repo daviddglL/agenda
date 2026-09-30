@@ -9,17 +9,18 @@ import com.daviddelgado.agenda.feature.auth.domain.usecase.RegisterUseCase
 import com.daviddelgado.agenda.feature.auth.domain.usecase.RequestPasswordResetUseCase
 import com.daviddelgado.agenda.feature.auth.domain.usecase.ResetPasswordUseCase
 import com.daviddelgado.agenda.feature.auth.domain.usecase.RestoreSessionUseCase
+import org.koin.core.module.dsl.factoryOf
 import org.koin.dsl.module
 
 val authDomainModule =
     module {
-        factory { LoginUseCase(get()) }
-        factory { RegisterUseCase(get()) }
-        factory { DeleteAccountUseCase(get()) }
-        factory { RegisterFcmTokenUseCase(get()) }
-        factory { RequestPasswordResetUseCase(get()) }
-        factory { ResetPasswordUseCase(get()) }
-        factory { RestoreSessionUseCase(get()) }
-        factory { LogoutUseCase(get()) }
-        factory { ObserveCurrentUserUseCase(get()) }
+        factoryOf(::LoginUseCase)
+        factoryOf(::RegisterUseCase)
+        factoryOf(::DeleteAccountUseCase)
+        factoryOf(::RegisterFcmTokenUseCase)
+        factoryOf(::RequestPasswordResetUseCase)
+        factoryOf(::ResetPasswordUseCase)
+        factoryOf(::RestoreSessionUseCase)
+        factoryOf(::LogoutUseCase)
+        factoryOf(::ObserveCurrentUserUseCase)
     }
