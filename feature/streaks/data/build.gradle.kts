@@ -6,9 +6,9 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(projects.feature.streaks.domain)
-            // Temporal: pasa a projects.feature.tasks.database en la Tarea 4. La racha se calcula
-            // con las fechas de las tareas completadas (excepcion documentada en la spec).
-            implementation(projects.core.database)
+            // Excepcion documentada en la spec (§3): la racha se calcula con las fechas de las
+            // tareas completadas.
+            implementation(projects.feature.tasks.database)
         }
     }
 }

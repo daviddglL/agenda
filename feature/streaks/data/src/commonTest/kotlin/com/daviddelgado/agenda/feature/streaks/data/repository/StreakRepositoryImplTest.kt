@@ -1,7 +1,7 @@
 package com.daviddelgado.agenda.feature.streaks.data.repository
 
-import com.daviddelgado.agenda.database.TaskEntity
 import com.daviddelgado.agenda.feature.streaks.data.fake.FakeTaskDao
+import com.daviddelgado.agenda.feature.tasks.database.entity.TaskEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Clock

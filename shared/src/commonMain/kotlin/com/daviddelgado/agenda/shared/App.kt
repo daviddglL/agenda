@@ -29,9 +29,9 @@ import com.daviddelgado.agenda.feature.auth.presentation.login.LoginScreen
 import com.daviddelgado.agenda.feature.auth.presentation.register.RegisterScreen
 import com.daviddelgado.agenda.feature.auth.presentation.resetpassword.ResetPasswordScreen
 import com.daviddelgado.agenda.feature.auth.presentation.settings.SettingsScreen
-import com.daviddelgado.agenda.feature.calendar.CalendarScreen
 import com.daviddelgado.agenda.feature.streaks.presentation.streaks.StreaksScreen
-import com.daviddelgado.agenda.feature.tasks.TasksScreen
+import com.daviddelgado.agenda.feature.tasks.presentation.calendar.CalendarScreen
+import com.daviddelgado.agenda.feature.tasks.presentation.tasks.TasksScreen
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
 

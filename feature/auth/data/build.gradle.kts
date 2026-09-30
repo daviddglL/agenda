@@ -9,9 +9,9 @@ kotlin {
             implementation(projects.feature.auth.domain)
             implementation(projects.core.common)
             implementation(projects.core.network)
-            // Temporal: pasa a projects.feature.tasks.database en la Tarea 4. AuthRepositoryImpl
-            // vacia las tareas locales al hacer logout / borrar la cuenta (excepcion documentada en la spec).
-            implementation(projects.core.database)
+            // Excepcion documentada en la spec (§3): AuthRepositoryImpl vacia las tareas locales
+            // al hacer logout / borrar la cuenta.
+            implementation(projects.feature.tasks.database)
             implementation(libs.ktor.client.auth)
             implementation(libs.kotlinx.serialization.json)
         }

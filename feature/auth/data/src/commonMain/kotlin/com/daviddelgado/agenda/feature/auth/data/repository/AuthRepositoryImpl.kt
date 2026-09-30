@@ -1,11 +1,11 @@
 package com.daviddelgado.agenda.feature.auth.data.repository
 
 import com.daviddelgado.agenda.common.logging.AgendaLogger
-import com.daviddelgado.agenda.database.PendingDeletionDao
-import com.daviddelgado.agenda.database.TaskDao
 import com.daviddelgado.agenda.feature.auth.data.remote.AuthApi
 import com.daviddelgado.agenda.feature.auth.domain.model.User
 import com.daviddelgado.agenda.feature.auth.domain.repository.AuthRepository
+import com.daviddelgado.agenda.feature.tasks.database.dao.PendingDeletionDao
+import com.daviddelgado.agenda.feature.tasks.database.dao.TaskDao
 import com.daviddelgado.agenda.network.TokenProvider
 import com.daviddelgado.agenda.network.dto.AuthResponse
 import kotlinx.coroutines.flow.MutableStateFlow

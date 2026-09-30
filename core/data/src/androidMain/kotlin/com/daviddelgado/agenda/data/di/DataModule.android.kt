@@ -2,7 +2,6 @@ package com.daviddelgado.agenda.data.di
 
 import com.daviddelgado.agenda.core.data.BuildConfig
 import com.daviddelgado.agenda.data.secure.SecureStorage
-import com.daviddelgado.agenda.database.DatabaseFactory
 import com.daviddelgado.agenda.network.NetworkConfig
 import com.daviddelgado.agenda.network.ProductionConfig
 import org.koin.android.ext.koin.androidContext
@@ -35,5 +34,4 @@ actual val platformDataModule: Module =
     module {
         single { networkConfig() }
         single { SecureStorage(androidContext()) }
-        single { DatabaseFactory(androidContext()) }
     }

@@ -1,7 +1,7 @@
 package com.daviddelgado.agenda.feature.auth.data.fake
 
-import com.daviddelgado.agenda.database.PendingDeletionDao
-import com.daviddelgado.agenda.database.PendingDeletionEntity
+import com.daviddelgado.agenda.feature.tasks.database.dao.PendingDeletionDao
+import com.daviddelgado.agenda.feature.tasks.database.entity.PendingDeletionEntity
 
 /** PendingDeletionDao en memoria: reproduce los tombstones de borrado sin red. */
 class FakePendingDeletionDao(initial: List<String> = emptyList()) : PendingDeletionDao {

@@ -1,7 +1,7 @@
 package com.daviddelgado.agenda.feature.streaks.data.fake
 
-import com.daviddelgado.agenda.database.TaskDao
-import com.daviddelgado.agenda.database.TaskEntity
+import com.daviddelgado.agenda.feature.tasks.database.dao.TaskDao
+import com.daviddelgado.agenda.feature.tasks.database.entity.TaskEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map

@@ -1,8 +1,8 @@
 package com.daviddelgado.agenda.feature.streaks.data.repository
 
-import com.daviddelgado.agenda.database.TaskDao
 import com.daviddelgado.agenda.feature.streaks.domain.model.StreakSummary
 import com.daviddelgado.agenda.feature.streaks.domain.repository.StreakRepository
+import com.daviddelgado.agenda.feature.tasks.database.dao.TaskDao
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.Clock

@@ -3,8 +3,8 @@ package com.daviddelgado.agenda.data.auth
 import com.daviddelgado.agenda.data.fake.FakeTokenProvider
 import com.daviddelgado.agenda.data.fake.mockHttpClient
 import com.daviddelgado.agenda.data.fake.respondJson
+import com.daviddelgado.agenda.feature.tasks.data.remote.TaskApi
 import com.daviddelgado.agenda.network.ApiException
-import com.daviddelgado.agenda.network.api.TaskApi
 import io.ktor.client.engine.mock.respondError
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
