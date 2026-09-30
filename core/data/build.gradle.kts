@@ -11,13 +11,6 @@ kotlin {
             implementation(libs.kotlinx.serialization.json)
         }
 
-        commonTest.dependencies {
-            // Temporal (test): TokenRefreshTest ejercita el refresco de token con TaskApi (feature:tasks:data).
-            implementation(projects.feature.tasks.data)
-            implementation(libs.ktor.client.mock)
-            implementation(libs.ktor.client.contentNegotiation)
-            implementation(libs.ktor.serialization.kotlinxJson)
-        }
         androidMain.dependencies {
             implementation(libs.androidx.security.crypto)
             implementation(libs.koin.android)

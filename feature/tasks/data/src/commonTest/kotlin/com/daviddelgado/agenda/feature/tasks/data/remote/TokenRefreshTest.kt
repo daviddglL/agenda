@@ -1,9 +1,8 @@
-package com.daviddelgado.agenda.data.auth
+package com.daviddelgado.agenda.feature.tasks.data.remote
 
-import com.daviddelgado.agenda.data.fake.FakeTokenProvider
-import com.daviddelgado.agenda.data.fake.mockHttpClient
-import com.daviddelgado.agenda.data.fake.respondJson
-import com.daviddelgado.agenda.feature.tasks.data.remote.TaskApi
+import com.daviddelgado.agenda.feature.tasks.data.fake.FakeTokenProvider
+import com.daviddelgado.agenda.feature.tasks.data.fake.mockHttpClient
+import com.daviddelgado.agenda.feature.tasks.data.fake.respondJson
 import com.daviddelgado.agenda.network.ApiException
 import io.ktor.client.engine.mock.respondError
 import io.ktor.http.HttpHeaders
