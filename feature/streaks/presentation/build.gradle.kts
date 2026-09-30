@@ -6,7 +6,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(projects.feature.streaks.domain)
-            implementation(projects.core.common)
+            implementation(projects.core.presentation)
             implementation(projects.core.designsystem)
         }
     }

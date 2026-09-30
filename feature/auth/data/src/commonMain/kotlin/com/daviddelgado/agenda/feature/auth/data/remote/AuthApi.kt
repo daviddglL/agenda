@@ -1,13 +1,13 @@
 package com.daviddelgado.agenda.feature.auth.data.remote
 
+import com.daviddelgado.agenda.core.data.networking.apiCall
+import com.daviddelgado.agenda.core.data.networking.dto.AuthResponse
+import com.daviddelgado.agenda.core.data.networking.dto.UserResponse
 import com.daviddelgado.agenda.feature.auth.data.dto.FcmTokenRequest
 import com.daviddelgado.agenda.feature.auth.data.dto.ForgotPasswordRequest
 import com.daviddelgado.agenda.feature.auth.data.dto.LoginRequest
 import com.daviddelgado.agenda.feature.auth.data.dto.RegisterRequest
 import com.daviddelgado.agenda.feature.auth.data.dto.ResetPasswordRequest
-import com.daviddelgado.agenda.network.apiCall
-import com.daviddelgado.agenda.network.dto.AuthResponse
-import com.daviddelgado.agenda.network.dto.UserResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.auth.Auth

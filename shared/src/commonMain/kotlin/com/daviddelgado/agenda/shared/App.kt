@@ -23,7 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.daviddelgado.agenda.designsystem.theme.AgendaTheme
+import com.daviddelgado.agenda.core.designsystem.theme.AgendaTheme
 import com.daviddelgado.agenda.feature.auth.presentation.forgotpassword.ForgotPasswordScreen
 import com.daviddelgado.agenda.feature.auth.presentation.login.LoginScreen
 import com.daviddelgado.agenda.feature.auth.presentation.register.RegisterScreen

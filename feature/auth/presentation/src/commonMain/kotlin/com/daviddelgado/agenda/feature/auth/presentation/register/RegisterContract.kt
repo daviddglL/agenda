@@ -1,8 +1,8 @@
 package com.daviddelgado.agenda.feature.auth.presentation.register
 
-import com.daviddelgado.agenda.common.mvi.UiEffect
-import com.daviddelgado.agenda.common.mvi.UiIntent
-import com.daviddelgado.agenda.common.mvi.UiState
+import com.daviddelgado.agenda.core.presentation.mvi.UiEffect
+import com.daviddelgado.agenda.core.presentation.mvi.UiIntent
+import com.daviddelgado.agenda.core.presentation.mvi.UiState
 
 data class RegisterState(
     val name: String = "",

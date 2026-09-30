@@ -1,7 +1,7 @@
 package com.daviddelgado.agenda.feature.auth.presentation.register
 
 import androidx.lifecycle.viewModelScope
-import com.daviddelgado.agenda.common.mvi.MviViewModel
+import com.daviddelgado.agenda.core.presentation.mvi.MviViewModel
 import com.daviddelgado.agenda.feature.auth.domain.usecase.RegisterUseCase
 import kotlinx.coroutines.launch
 

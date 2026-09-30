@@ -19,7 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.daviddelgado.agenda.designsystem.component.AgendaPrimaryButton
+import com.daviddelgado.agenda.core.designsystem.component.AgendaPrimaryButton
 import org.koin.compose.viewmodel.koinViewModel
 
 /**

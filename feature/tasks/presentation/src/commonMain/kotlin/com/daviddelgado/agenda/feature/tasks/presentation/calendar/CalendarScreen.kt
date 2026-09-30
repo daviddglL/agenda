@@ -29,7 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.daviddelgado.agenda.designsystem.theme.AgendaViolet
+import com.daviddelgado.agenda.core.designsystem.theme.AgendaViolet
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.datetime.LocalDate
 import org.koin.compose.viewmodel.koinViewModel

@@ -30,9 +30,8 @@ include(":androidApp")
 include(":shared")
 include(":server")
 
-include(":core:common")
+include(":core:presentation")
 include(":core:designsystem")
-include(":core:network")
 include(":core:domain")
 include(":core:data")
 

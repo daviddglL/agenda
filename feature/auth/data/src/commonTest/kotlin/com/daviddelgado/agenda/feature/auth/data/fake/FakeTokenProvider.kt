@@ -1,6 +1,6 @@
 package com.daviddelgado.agenda.feature.auth.data.fake
 
-import com.daviddelgado.agenda.network.TokenProvider
+import com.daviddelgado.agenda.core.data.session.TokenProvider
 
 /** TokenProvider en memoria: sustituye al almacenamiento cifrado del dispositivo. */
 class FakeTokenProvider(

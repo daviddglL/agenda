@@ -15,8 +15,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.daviddelgado.agenda.designsystem.component.AgendaPrimaryButton
-import com.daviddelgado.agenda.designsystem.component.AgendaTextField
+import com.daviddelgado.agenda.core.designsystem.component.AgendaPrimaryButton
+import com.daviddelgado.agenda.core.designsystem.component.AgendaTextField
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.compose.viewmodel.koinViewModel
 

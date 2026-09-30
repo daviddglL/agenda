@@ -18,8 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.daviddelgado.agenda.designsystem.theme.AgendaGray
-import com.daviddelgado.agenda.designsystem.theme.AgendaGreen
+import com.daviddelgado.agenda.core.designsystem.theme.AgendaGray
+import com.daviddelgado.agenda.core.designsystem.theme.AgendaGreen
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.TimeZone

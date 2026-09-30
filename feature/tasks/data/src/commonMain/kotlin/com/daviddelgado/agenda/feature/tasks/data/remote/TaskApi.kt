@@ -1,10 +1,10 @@
 package com.daviddelgado.agenda.feature.tasks.data.remote
 
+import com.daviddelgado.agenda.core.data.networking.apiCall
 import com.daviddelgado.agenda.feature.tasks.data.dto.BulkDeleteRequest
 import com.daviddelgado.agenda.feature.tasks.data.dto.DeletedCountResponse
 import com.daviddelgado.agenda.feature.tasks.data.dto.TaskDto
 import com.daviddelgado.agenda.feature.tasks.data.websocket.WebSocketService
-import com.daviddelgado.agenda.network.apiCall
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.delete

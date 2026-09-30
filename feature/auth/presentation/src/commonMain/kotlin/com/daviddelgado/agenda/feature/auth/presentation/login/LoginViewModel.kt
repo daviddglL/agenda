@@ -1,8 +1,8 @@
 package com.daviddelgado.agenda.feature.auth.presentation.login
 
 import androidx.lifecycle.viewModelScope
-import com.daviddelgado.agenda.common.logging.AgendaLogger
-import com.daviddelgado.agenda.common.mvi.MviViewModel
+import com.daviddelgado.agenda.core.domain.logger.AgendaLogger
+import com.daviddelgado.agenda.core.presentation.mvi.MviViewModel
 import com.daviddelgado.agenda.feature.auth.domain.fcm.FcmTokenProvider
 import com.daviddelgado.agenda.feature.auth.domain.usecase.LoginUseCase
 import com.daviddelgado.agenda.feature.auth.domain.usecase.RegisterFcmTokenUseCase

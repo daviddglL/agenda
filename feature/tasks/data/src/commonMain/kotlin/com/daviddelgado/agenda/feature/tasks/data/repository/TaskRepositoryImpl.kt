@@ -1,6 +1,6 @@
 package com.daviddelgado.agenda.feature.tasks.data.repository
 
-import com.daviddelgado.agenda.common.logging.AgendaLogger
+import com.daviddelgado.agenda.core.domain.logger.AgendaLogger
 import com.daviddelgado.agenda.feature.tasks.data.mapper.toDomain
 import com.daviddelgado.agenda.feature.tasks.data.mapper.toDto
 import com.daviddelgado.agenda.feature.tasks.data.mapper.toEntity

@@ -1,8 +1,8 @@
 package com.daviddelgado.agenda.feature.tasks.presentation.tasks
 
-import com.daviddelgado.agenda.common.mvi.UiEffect
-import com.daviddelgado.agenda.common.mvi.UiIntent
-import com.daviddelgado.agenda.common.mvi.UiState
+import com.daviddelgado.agenda.core.presentation.mvi.UiEffect
+import com.daviddelgado.agenda.core.presentation.mvi.UiIntent
+import com.daviddelgado.agenda.core.presentation.mvi.UiState
 import com.daviddelgado.agenda.feature.tasks.domain.model.IncrementUnit
 import com.daviddelgado.agenda.feature.tasks.domain.model.ReminderFrequency
 import com.daviddelgado.agenda.feature.tasks.domain.model.Task

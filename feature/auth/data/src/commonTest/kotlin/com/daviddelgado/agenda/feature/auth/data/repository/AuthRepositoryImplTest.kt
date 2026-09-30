@@ -1,5 +1,6 @@
 package com.daviddelgado.agenda.feature.auth.data.repository
 
+import com.daviddelgado.agenda.core.data.networking.ApiException
 import com.daviddelgado.agenda.feature.auth.data.fake.FakePendingDeletionDao
 import com.daviddelgado.agenda.feature.auth.data.fake.FakeTaskDao
 import com.daviddelgado.agenda.feature.auth.data.fake.FakeTokenProvider
@@ -7,7 +8,6 @@ import com.daviddelgado.agenda.feature.auth.data.fake.mockHttpClient
 import com.daviddelgado.agenda.feature.auth.data.fake.respondJson
 import com.daviddelgado.agenda.feature.auth.data.remote.AuthApi
 import com.daviddelgado.agenda.feature.tasks.database.entity.TaskEntity
-import com.daviddelgado.agenda.network.ApiException
 import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest

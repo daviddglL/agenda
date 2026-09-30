@@ -9,7 +9,7 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import com.daviddelgado.agenda.common.logging.AgendaLogger
+import com.daviddelgado.agenda.core.domain.logger.AgendaLogger
 import com.daviddelgado.agenda.feature.auth.domain.usecase.RegisterFcmTokenUseCase
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage

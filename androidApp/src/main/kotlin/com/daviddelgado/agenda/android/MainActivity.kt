@@ -10,7 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
-import com.daviddelgado.agenda.common.logging.AgendaLogger
+import com.daviddelgado.agenda.core.domain.logger.AgendaLogger
 import com.daviddelgado.agenda.shared.App
 
 private const val LOG_TAG = "MainActivity"

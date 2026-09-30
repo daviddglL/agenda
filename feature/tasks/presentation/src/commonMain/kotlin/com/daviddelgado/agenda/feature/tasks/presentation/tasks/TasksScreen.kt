@@ -47,9 +47,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.daviddelgado.agenda.designsystem.component.AgendaDropdownField
-import com.daviddelgado.agenda.designsystem.component.AgendaPrimaryButton
-import com.daviddelgado.agenda.designsystem.component.AgendaTextField
+import com.daviddelgado.agenda.core.designsystem.component.AgendaDropdownField
+import com.daviddelgado.agenda.core.designsystem.component.AgendaPrimaryButton
+import com.daviddelgado.agenda.core.designsystem.component.AgendaTextField
 import com.daviddelgado.agenda.feature.tasks.domain.model.IncrementUnit
 import com.daviddelgado.agenda.feature.tasks.domain.model.ReminderFrequency
 import com.daviddelgado.agenda.feature.tasks.domain.model.Task

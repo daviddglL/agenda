@@ -1,6 +1,6 @@
 package com.daviddelgado.agenda.shared
 
-import com.daviddelgado.agenda.common.logging.AgendaLogger
+import com.daviddelgado.agenda.core.domain.logger.AgendaLogger
 import org.koin.core.context.startKoin
 import org.koin.core.module.Module
 import org.koin.dsl.KoinAppDeclaration

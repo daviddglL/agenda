@@ -1,6 +1,6 @@
 package com.daviddelgado.agenda.shared
 
-import com.daviddelgado.agenda.common.logging.AgendaLogger
+import com.daviddelgado.agenda.core.domain.logger.AgendaLogger
 import com.daviddelgado.agenda.feature.auth.domain.fcm.FcmTokenProvider
 import com.daviddelgado.agenda.feature.auth.domain.model.User
 import com.daviddelgado.agenda.feature.auth.domain.usecase.RegisterFcmTokenUseCase

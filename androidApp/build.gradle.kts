@@ -27,10 +27,8 @@ android {
 dependencies {
     implementation(projects.shared)
     implementation(projects.feature.auth.domain)
-    implementation(projects.core.common)
     implementation(projects.core.designsystem)
     implementation(projects.core.domain)
-    implementation(projects.core.network)
     implementation(libs.androidx.activity.compose)
     implementation(libs.koin.android)
     implementation(platform(libs.firebase.bom))

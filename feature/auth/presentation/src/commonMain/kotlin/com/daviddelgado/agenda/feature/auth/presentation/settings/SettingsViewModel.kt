@@ -1,7 +1,7 @@
 package com.daviddelgado.agenda.feature.auth.presentation.settings
 
 import androidx.lifecycle.viewModelScope
-import com.daviddelgado.agenda.common.mvi.MviViewModel
+import com.daviddelgado.agenda.core.presentation.mvi.MviViewModel
 import com.daviddelgado.agenda.feature.auth.domain.usecase.DeleteAccountUseCase
 import com.daviddelgado.agenda.feature.auth.domain.usecase.LogoutUseCase
 import com.daviddelgado.agenda.feature.auth.domain.usecase.ObserveCurrentUserUseCase

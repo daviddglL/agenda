@@ -1,7 +1,7 @@
 package com.daviddelgado.agenda.feature.streaks.presentation.streaks
 
 import androidx.lifecycle.viewModelScope
-import com.daviddelgado.agenda.common.mvi.MviViewModel
+import com.daviddelgado.agenda.core.presentation.mvi.MviViewModel
 import com.daviddelgado.agenda.feature.streaks.domain.usecase.ObserveStreakUseCase
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach

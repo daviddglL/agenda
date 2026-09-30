@@ -1,6 +1,6 @@
 package com.daviddelgado.agenda.shared
 
-import com.daviddelgado.agenda.data.di.dataModule
+import com.daviddelgado.agenda.core.data.di.coreDataModule
 import com.daviddelgado.agenda.feature.auth.data.di.authDataModule
 import com.daviddelgado.agenda.feature.auth.domain.di.authDomainModule
 import com.daviddelgado.agenda.feature.auth.presentation.di.authPresentationModule
@@ -23,7 +23,7 @@ private val sharedModule =
 
 val appModules: List<Module> =
     listOf(
-        dataModule,
+        coreDataModule,
         tasksDatabaseModule,
         authDomainModule,
         authDataModule,

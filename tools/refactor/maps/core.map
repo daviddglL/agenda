@@ -1,0 +1,12 @@
+com.daviddelgado.agenda.common.logging com.daviddelgado.agenda.core.domain.logger
+com.daviddelgado.agenda.common.util com.daviddelgado.agenda.core.domain.util
+com.daviddelgado.agenda.common.mvi com.daviddelgado.agenda.core.presentation.mvi
+com.daviddelgado.agenda.network.TokenProvider com.daviddelgado.agenda.core.data.session.TokenProvider
+com.daviddelgado.agenda.network.dto com.daviddelgado.agenda.core.data.networking.dto
+com.daviddelgado.agenda.network com.daviddelgado.agenda.core.data.networking
+com.daviddelgado.agenda.data.secure com.daviddelgado.agenda.core.data.session
+com.daviddelgado.agenda.data.auth.TokenProviderImpl com.daviddelgado.agenda.core.data.session.TokenProviderImpl
+com.daviddelgado.agenda.data.di.dataModule com.daviddelgado.agenda.core.data.di.coreDataModule
+com.daviddelgado.agenda.data.di.platformDataModule com.daviddelgado.agenda.core.data.di.platformCoreDataModule
+com.daviddelgado.agenda.data.fake com.daviddelgado.agenda.core.data.fake
+com.daviddelgado.agenda.designsystem com.daviddelgado.agenda.core.designsystem

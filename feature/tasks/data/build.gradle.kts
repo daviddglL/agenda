@@ -8,8 +8,8 @@ kotlin {
         commonMain.dependencies {
             implementation(projects.feature.tasks.domain)
             implementation(projects.feature.tasks.database)
-            implementation(projects.core.common)
-            implementation(projects.core.network)
+            implementation(projects.core.domain)
+            implementation(projects.core.data)
             implementation(libs.ktor.client.websockets)
             implementation(libs.kotlinx.serialization.json)
         }

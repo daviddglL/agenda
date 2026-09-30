@@ -1,6 +1,6 @@
 package com.daviddelgado.agenda.feature.auth.data.di
 
-import com.daviddelgado.agenda.common.logging.AgendaLogger
+import com.daviddelgado.agenda.core.domain.logger.AgendaLogger
 import com.daviddelgado.agenda.feature.auth.domain.fcm.FcmTokenProvider
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.suspendCancellableCoroutine

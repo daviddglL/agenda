@@ -1,8 +1,8 @@
 package com.daviddelgado.agenda.feature.auth.data.fake
 
-import com.daviddelgado.agenda.network.NetworkConfig
-import com.daviddelgado.agenda.network.TokenProvider
-import com.daviddelgado.agenda.network.installAgendaPlugins
+import com.daviddelgado.agenda.core.data.networking.NetworkConfig
+import com.daviddelgado.agenda.core.data.networking.installAgendaPlugins
+import com.daviddelgado.agenda.core.data.session.TokenProvider
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope

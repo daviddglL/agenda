@@ -7,8 +7,8 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(projects.feature.auth.domain)
-            implementation(projects.core.common)
-            implementation(projects.core.network)
+            implementation(projects.core.domain)
+            implementation(projects.core.data)
             // Excepcion documentada en la spec (§3): AuthRepositoryImpl vacia las tareas locales
             // al hacer logout / borrar la cuenta.
             implementation(projects.feature.tasks.database)

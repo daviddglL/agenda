@@ -1,7 +1,7 @@
 package com.daviddelgado.agenda.feature.tasks.presentation.calendar
 
 import androidx.lifecycle.viewModelScope
-import com.daviddelgado.agenda.common.mvi.MviViewModel
+import com.daviddelgado.agenda.core.presentation.mvi.MviViewModel
 import com.daviddelgado.agenda.feature.tasks.domain.usecase.ObserveTasksUseCase
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach

@@ -1,8 +1,8 @@
 package com.daviddelgado.agenda.feature.tasks.presentation.tasks
 
 import androidx.lifecycle.viewModelScope
-import com.daviddelgado.agenda.common.mvi.MviViewModel
-import com.daviddelgado.agenda.common.util.randomEntityId
+import com.daviddelgado.agenda.core.domain.util.randomEntityId
+import com.daviddelgado.agenda.core.presentation.mvi.MviViewModel
 import com.daviddelgado.agenda.feature.tasks.domain.model.IncrementConfig
 import com.daviddelgado.agenda.feature.tasks.domain.model.IncrementUnit
 import com.daviddelgado.agenda.feature.tasks.domain.model.ReminderFrequency
