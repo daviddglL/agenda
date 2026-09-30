@@ -4,7 +4,7 @@ Este documento establece las restricciones técnicas obligatorias para el desarr
 NO se permite modificar ni sustituir ninguna de las tecnologías o patrones aquí descritos durante el proceso.
 
 ## 1. Arquitectura y Patrones
-- **Arquitectura:** Clean Architecture + Arquitectura Modularizada (Estructura por módulos independientes: `:core:network`, `:core:database`, `:core:designsystem`, `:feature:login`, etc.).
+- **Arquitectura:** Clean Architecture + Arquitectura Modularizada (Estructura por módulos independientes, al estilo Squadfy_KMM: `core:{domain,data,presentation,designsystem}` + `feature:<x>:{domain,data,[database],presentation}` + `build-logic` con convention plugins. Detalle y reglas de dependencia en [docs/superpowers/specs/2026-09-30-clean-architecture-modular-design.md](docs/superpowers/specs/2026-09-30-clean-architecture-modular-design.md)).
 - **Patrón de Presentación:** MVI (Model-View-Intent).
 - **Inyección de Dependencias:** Koin (sostenible y optimizado para Kotlin Multiplatform).
 

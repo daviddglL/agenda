@@ -31,5 +31,8 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.koin.android)
         }
+        androidUnitTest.dependencies {
+            implementation(libs.koin.test)
+        }
     }
 }

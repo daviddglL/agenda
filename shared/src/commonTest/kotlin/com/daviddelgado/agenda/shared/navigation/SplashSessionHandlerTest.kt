@@ -1,4 +1,4 @@
-package com.daviddelgado.agenda.shared
+package com.daviddelgado.agenda.shared.navigation
 
 import com.daviddelgado.agenda.feature.auth.domain.fcm.FcmTokenProvider
 import com.daviddelgado.agenda.feature.auth.domain.model.User

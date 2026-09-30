@@ -1,4 +1,4 @@
-package com.daviddelgado.agenda.shared
+package com.daviddelgado.agenda.shared.navigation
 
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test

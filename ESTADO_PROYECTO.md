@@ -5,7 +5,7 @@ decisiones ya tomadas para no repetir trabajo ni contradecirlas sin querer. La s
 técnica obligatoria (no negociable) sigue estando en [markdown.md](markdown.md); este
 documento es el "qué se ha hecho, qué falta y cómo se arranca" sobre esa base.
 
-Última actualización: 2026-09-18 (sesión 7: revisión completa de código, seguridad y
+Última actualización: 2026-09-30 (sesión 8: refactor a Clean Architecture modular, sección 7terdecies. Sesión 7, 2026-09-18: revisión completa de código, seguridad y
 consistencia de la documentación pedida por el usuario sin partir de un bug concreto —
 sección 7duodecies. Arreglados: CORS abierto a cualquier origen, `AGENDA_JWT_SECRET` sin
 aviso si falta, callback de permiso `POST_NOTIFICATIONS` que ignoraba el resultado, Keychain
@@ -57,24 +57,36 @@ registrarse de nuevo desde la app.
 
 Tests: `./gradlew check` (compila todo + ktlint + detekt + lint + los 226 tests unitarios).
 Tests de UI de Compose (necesitan el emulador arrancado, sección 6):
-`./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest :feature:calendar:connectedDebugAndroidTest`.
+`./gradlew :feature:auth:presentation:connectedDebugAndroidTest :feature:tasks:presentation:connectedDebugAndroidTest`.
 
 ## 2. Estructura de módulos
 
 ```
-core/common        -> base MVI (UiState/UiIntent/UiEffect, MviViewModel) + randomEntityId()
-core/designsystem  -> tema Compose Multiplatform (paleta de Figma) + AgendaDropdownField
-core/domain        -> modelos, enums, interfaces de repositorio, casos de uso
-core/network       -> Ktor Client, refresco de token real, ApiException, AuthApi/TaskApi,
-                       WebSocketService, ProductionConfig (URL/pines de produccion)
-core/database      -> Room KMP (offline-first), TaskEntity con pendingSync,
-                       PendingDeletionEntity (tombstones de borrado sin red)
-core/data          -> implementaciones de repositorio (SSOT), mapeos, Keychain/EncryptedPrefs
-feature/login, register, calendar, tasks, streaks, settings -> UI + MVI por pantalla (Compose)
-shared             -> navegación (4 pestañas + login/registro), arranque de Koin, iOS entry point
-androidApp         -> app Android final
-server             -> backend Ktor Server + Exposed + H2 + WebSocket de tiempo real
+build-logic                -> convention plugins (agenda.kmp.library, agenda.cmp.library, agenda.cmp.feature, agenda.room, agenda.android.application)
+core:domain                -> modelos, enums, errores/Result, AgendaLogger, contratos transversales
+core:data                  -> Ktor Client + refresco de token, SecureStorage, TokenProvider,
+                              NetworkConfig, ProductionConfig
+core:presentation          -> base MVI (UiState/UiIntent/UiEffect, MviViewModel)
+core:designsystem          -> tema Compose Multiplatform (paleta de Figma) + AgendaDropdownField
+feature:auth:{domain,data,presentation}
+                           -> login, registro, recuperacion de contraseña, ajustes, FCM
+feature:tasks:{domain,data,database,presentation}
+                           -> tareas y calendario (data incluye WebSocketService); database = Room KMP (offline-first),
+                              TaskEntity con pendingSync, tombstones de borrado
+feature:streaks:{domain,data,presentation}
+                           -> rachas
+shared                     -> di (appModules, initKoin), navigation (HomeNavigator,
+                              SplashSessionHandler), App, iOS entry point
+androidApp                 -> app Android final
+server                     -> backend Ktor Server + Exposed + H2 + WebSocket de tiempo real
 ```
+
+Reglas: `presentation` nunca depende de `data` ni de `database`; `domain` no importa Ktor, Room
+ni Compose; las dependencias entre proyectos van en el `build.gradle.kts` de cada módulo, no en
+los convention plugins. Excepciones de dependencia entre features (solo dos):
+`feature:auth:data -> feature:tasks:database` (logout y borrado de cuenta limpian las tareas
+locales) y `feature:streaks:data -> feature:tasks:database` (la racha se calcula desde las
+tareas completadas). Spec: [docs/superpowers/specs/2026-09-30-clean-architecture-modular-design.md](docs/superpowers/specs/2026-09-30-clean-architecture-modular-design.md).
 
 Paquete base: `com.daviddelgado.agenda`. `rootProject.name = "agenda"`.
 
@@ -248,7 +260,7 @@ Compose necesitan el emulador arrancado (ver sección 1).
 | `:server` | 72 | API completa (incluida `/tasks/ws`), JWT y bcrypt, validación de tareas y de email, rate limiting de `/auth`, `ReminderScheduler` (lógica pura de cuándo toca un recordatorio, 10), `ReminderJob` (bucle en segundo plano, 4), `PushSender` (Firebase, 2), `FcmTokenRoutes` (3), **`PasswordResetRoutesTest` (9: pedir código con email existente/inexistente siempre responde 204, resetear con código correcto permite loguearse con la contraseña nueva, código incorrecto/caducado/agotado tras 5 intentos se rechaza, pedir código dos veces invalida el primero, resetear invalida el refresh token anterior, contraseña nueva de menos de 6 caracteres se rechaza), `EmailSenderTest` (5: `SmtpEmailSender` con `runCatching` ante un host inalcanzable, `NoOpEmailSender`, `provideEmailSender` con credenciales completas/incompletas), `JwtConfigTest` ampliado con el claim `tv` de `token_version`, `AuthRoutesTest` ampliado con `/auth/refresh` rechazando un `token_version` desactualizado** |
 
 Comandos sueltos: `./gradlew :core:data:testDebugUnitTest`,
-`./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest :feature:calendar:connectedDebugAndroidTest`
+`./gradlew :feature:auth:presentation:connectedDebugAndroidTest :feature:tasks:presentation:connectedDebugAndroidTest`
 (instalan un APK de test en el emulador; tarda ~1-2 min la primera vez).
 
 Cómo están montados (para escribir más igual):
@@ -317,7 +329,7 @@ Cómo están montados (para escribir más igual):
   el formulario en modo "Editar tarea" con sus datos. Tarea de prueba borrada al terminar
   para no dejar basura en la cuenta `e2e@test.com`.
 - `./gradlew check` -> BUILD SUCCESSFUL (148 unitarios + ktlint + detekt + lint).
-- `./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest :feature:calendar:connectedDebugAndroidTest`
+- `./gradlew :feature:auth:presentation:connectedDebugAndroidTest :feature:tasks:presentation:connectedDebugAndroidTest`
   -> 14/14 tests de Compose UI en verde en el emulador Pixel_6a real.
 - Pendiente de decisión del usuario: commitear estos cambios (working tree tenía cambios sin
   commitear al terminar la sesión).
@@ -357,7 +369,7 @@ Continuación de la misma sesión 5, tras pedir tres retoques concretos.
     de forma determinista, que el `Column` (con `Modifier.testTag("taskFormScroll")`) expone
     `SemanticsActions.ScrollBy` — RED/GREEN verificado quitando y devolviendo el fix.
 - `./gradlew check` -> BUILD SUCCESSFUL (151 unitarios + ktlint + detekt + lint).
-- `./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest :feature:calendar:connectedDebugAndroidTest`
+- `./gradlew :feature:auth:presentation:connectedDebugAndroidTest :feature:tasks:presentation:connectedDebugAndroidTest`
   -> 16/16 tests de Compose UI en verde en el emulador Pixel_6a real.
 
 ## 7quater. Verificado en caliente el 2026-09-14 (tarea incremental genera copias reales)
@@ -384,7 +396,7 @@ Continuación de la misma sesión 5, tras pedir que "incremental" haga algo de v
 - `./gradlew check` -> BUILD SUCCESSFUL (160 unitarios + ktlint + detekt + lint, incluida la
   subida de `LongParameterList.constructorThreshold` a 10 en `config/detekt/detekt.yml`
   porque `TasksViewModel` pasó a recibir 9 casos de uso).
-- `./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest :feature:calendar:connectedDebugAndroidTest`
+- `./gradlew :feature:auth:presentation:connectedDebugAndroidTest :feature:tasks:presentation:connectedDebugAndroidTest`
   -> 16/16 en verde (sin cambios en la UI instrumentada, la generación de copias no se probó
   por Compose UI test, solo a nivel de `TasksViewModel` + a mano en el emulador).
 
@@ -481,7 +493,7 @@ Verificación de esta sesión:
   `PushSenderTest` (2), `FcmTokenRoutesTest` (3) y la validación/rate limiting ya cubiertas
   dentro de `AuthRoutesTest`/`TaskRoutesTest`).
 - Emulador Pixel_6a (`emulator-5554`, ya arrancado, confirmado con `adb devices` antes de
-  empezar) + `./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest :feature:calendar:connectedDebugAndroidTest`
+  empezar) + `./gradlew :feature:auth:presentation:connectedDebugAndroidTest :feature:tasks:presentation:connectedDebugAndroidTest`
   -> **18/18 en verde** (antes 16): login 6/6, calendar 4/4 (incluida
   `losBotonesDeNavegacionDelMesTienenDescripcionAccesible`, Task 2, primera vez en un
   dispositivo real), tasks 8/8 (incluida `escribirEnElBuscadorOcultaLasTareasQueNoCoinciden`,
@@ -563,7 +575,7 @@ Verificación de esta sesión:
 - `./gradlew :server:test` -> confirmado sin regresión de comportamiento tras el arreglo de
   detekt (mismos 72 tests, todos en verde).
 - Emulador Pixel_6a (`emulator-5554`, confirmado con `adb devices` antes de empezar) +
-  `./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest :feature:calendar:connectedDebugAndroidTest`
+  `./gradlew :feature:auth:presentation:connectedDebugAndroidTest :feature:tasks:presentation:connectedDebugAndroidTest`
   -> **19/19 en verde** (antes 18): login 7/7 (incluida
   `pulsarOlvidasteTuContrasenaNavegaAlFormularioDeRecuperacion`, primera vez en un dispositivo
   real), tasks 8/8, calendar 4/4. 0 fallos, 0 saltados.
@@ -767,6 +779,42 @@ Revisión pedida explícitamente por el usuario, sin partir de un bug concreto: 
   se confirmaron vigentes y fieles al código.
 - Pendiente de esta sesión: correr `./gradlew check` completo tras estos cambios y confirmarlo
   aquí (ver la nota de verificación al cierre de esta sección si se ha llegado a ejecutar).
+
+## 7terdecies. Sesión 8 (2026-09-30): refactor a Clean Architecture modular (sin cambios de comportamiento)
+
+Rama `refactor/clean-architecture-modular`, en 6 tareas, siguiendo la estructura de Squadfy_KMM
+(ver el árbol de la sección 2 y la spec enlazada allí).
+
+- **Hecho:** `build-logic` con convention plugins; módulos `feature:auth`, `feature:tasks` y
+  `feature:streaks` en capas `domain/data/[database]/presentation`; `core` reducido a lo
+  transversal (`domain`, `data`, `presentation`, `designsystem`; ya no existen `core:common`,
+  `core:network` ni `core:database`); `shared` con paquetes `di` y `navigation`. Paquetes
+  `com.daviddelgado.agenda.<core|feature>.[<feature>.]<capa>.<subpaquete>`.
+- **Test nuevo:** `AppModulesTest` (`shared`, androidUnitTest) usa `verify()` de Koin para
+  comprobar que el grafo completo resuelve todas las dependencias (al dividir los módulos es
+  fácil perder una definición, y fallaría al abrir la pantalla, no al compilar). `extraTypes`
+  solo lleva `Context`, `HttpClientConfig`, `HttpClientEngine` y `List` (parámetros de
+  constructores de Android/Ktor/stdlib que `verify` inspecciona por reflexión).
+- **Excepciones de dependencia entre features (solo dos):** `auth:data -> tasks:database`
+  (logout / borrado de cuenta limpian las tareas locales) y `streaks:data -> tasks:database`
+  (la racha se calcula desde las tareas completadas).
+- **Carpeta de esquemas de Room renombrada** a
+  `schemas/com.daviddelgado.agenda.feature.tasks.database.AgendaDatabase/`. `1.json`-`4.json`
+  son idénticos byte a byte, así que la identidad de la BD instalada no cambia.
+- **`TokenRefreshTest`** vive ahora en `feature/tasks/data` (commonTest): ejercita el refresco
+  de token de core a través de `TaskApi`, y dejarlo en core haría que core dependiera de una
+  feature. Por eso `core:data` no tiene tests.
+- **iOS no se ha compilado** (desarrollo en Windows): hay que compilarlo en un Mac. Los ficheros
+  `iosMain` se revisaron a mano y con greps de referencias obsoletas.
+- **Tests de UI conectados:** pasaron en Pixel_6a tras la Tarea 4 (tasks/calendar 12, auth 7).
+- **Prueba manual en emulador (Pixel_6a + `:server:run`), 2026-09-30:** splash y Koin
+  arrancan sin errores; logout y login (e2e@test.com); crear tarea; completarla; pestaña Rachas
+  muestra racha actual 1 (no se anotó el valor previo); el calendario muestra la tarea el día 30;
+  ajustes y logout; con otro usuario (registrado en el momento) la lista está vacía; al volver
+  a entrar como e2e la lista aparece vacía hasta pulsar "Sincronizar" (no comparado con el
+  comportamiento previo al refactor). **NO verificado: la llegada del push de recordatorio**:
+  en este emulador `FirebaseMessaging` falla con `FIS_AUTH_ERROR` al pedir el token FCM
+  (`AndroidFcmTokenProvider` lo captura y sigue), así que no hay push posible.
 
 ## 8. Producción: URL y certificate pinning (infraestructura lista, sin dominio real)
 

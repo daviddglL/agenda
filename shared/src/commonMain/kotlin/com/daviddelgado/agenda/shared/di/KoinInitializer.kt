@@ -1,4 +1,4 @@
-package com.daviddelgado.agenda.shared
+package com.daviddelgado.agenda.shared.di
 
 import com.daviddelgado.agenda.core.domain.logger.AgendaLogger
 import org.koin.core.context.startKoin

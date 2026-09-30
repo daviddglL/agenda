@@ -1,4 +1,4 @@
-package com.daviddelgado.agenda.shared
+package com.daviddelgado.agenda.shared.navigation
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

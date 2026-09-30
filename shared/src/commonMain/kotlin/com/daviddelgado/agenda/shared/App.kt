@@ -32,6 +32,9 @@ import com.daviddelgado.agenda.feature.auth.presentation.settings.SettingsScreen
 import com.daviddelgado.agenda.feature.streaks.presentation.streaks.StreaksScreen
 import com.daviddelgado.agenda.feature.tasks.presentation.calendar.CalendarScreen
 import com.daviddelgado.agenda.feature.tasks.presentation.tasks.TasksScreen
+import com.daviddelgado.agenda.shared.navigation.HomeNavigator
+import com.daviddelgado.agenda.shared.navigation.HomeTab
+import com.daviddelgado.agenda.shared.navigation.SplashSessionHandler
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
 

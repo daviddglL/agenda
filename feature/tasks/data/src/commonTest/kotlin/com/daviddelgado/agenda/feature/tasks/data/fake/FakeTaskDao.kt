@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.map
 /**
  * TaskDao en memoria: reproduce el comportamiento de las consultas de Room (filtro por
  * fecha, `pendingSync`, borrados conjuntos) sin necesitar un dispositivo ni SQLite, para
- * poder testear los repositorios de :core:data en codigo comun.
+ * poder testear los repositorios de :feature:tasks:data en codigo comun.
  */
 class FakeTaskDao(initial: List<TaskEntity> = emptyList()) : TaskDao {
     private val rows = MutableStateFlow(initial.associateBy { it.id })

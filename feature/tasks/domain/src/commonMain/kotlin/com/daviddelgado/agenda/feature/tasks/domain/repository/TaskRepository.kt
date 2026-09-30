@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.LocalDate
 
 /**
- * Unica Fuente de Verdad (SSOT) para tareas. La implementacion en :core:data combina
+ * Unica Fuente de Verdad (SSOT) para tareas. La implementacion en :feature:tasks:data combina
  * Room (offline-first) y Ktor (sincronizacion remota) segun el punto 2 de markdown.md.
  */
 interface TaskRepository {

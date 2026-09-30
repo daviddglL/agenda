@@ -1,4 +1,4 @@
-package com.daviddelgado.agenda.shared
+package com.daviddelgado.agenda.shared.di
 
 import com.daviddelgado.agenda.core.data.di.coreDataModule
 import com.daviddelgado.agenda.feature.auth.data.di.authDataModule
@@ -11,6 +11,7 @@ import com.daviddelgado.agenda.feature.tasks.data.di.tasksDataModule
 import com.daviddelgado.agenda.feature.tasks.database.di.tasksDatabaseModule
 import com.daviddelgado.agenda.feature.tasks.domain.di.tasksDomainModule
 import com.daviddelgado.agenda.feature.tasks.presentation.di.tasksPresentationModule
+import com.daviddelgado.agenda.shared.navigation.SplashSessionHandler
 import org.koin.core.module.Module
 import org.koin.dsl.module
 
