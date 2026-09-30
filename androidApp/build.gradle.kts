@@ -1,21 +1,15 @@
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.compose.compiler)
+    id("agenda.android.application")
     alias(libs.plugins.google.services)
 }
 
 android {
     namespace = "com.daviddelgado.agenda.android"
-    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.daviddelgado.agenda"
-        minSdk = 26
-        targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -28,19 +22,6 @@ android {
             )
         }
     }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    buildFeatures {
-        compose = true
-    }
-}
-
-kotlin {
-    jvmToolchain(17)
 }
 
 dependencies {
