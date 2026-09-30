@@ -153,7 +153,7 @@ el convention plugin.
 | `TaskRepository` | `tasks.domain.repository` |
 | ObserveTasks, UpsertTask, GenerateTaskRepetitions, DeleteTask(s), DeleteAllTasks, ToggleTaskCompletion, SyncTasks, ObserveTaskChanges (+ `TaskUseCasesTest`, `GenerateTaskRepetitionsUseCaseTest`, `FakeTaskRepository`) | `tasks.domain.usecase` |
 | `TaskApi`, `TaskDtos` | `tasks.data.remote`, `tasks.data.dto` |
-| `WebSocketService` (solo transporta eventos de tareas) | `tasks.data.websocket` |
+| `WebSocketService` (su único uso es `TaskApi.observeChanges()`, verificado con grep el 2026-09-30) | `tasks.data.websocket` |
 | `TaskMapper`, `TaskDtoMapper` (+ tests) | `tasks.data.mapper` |
 | `TaskRepositoryImpl` (+ test, `FakeTaskDao`, `FakePendingDeletionDao`) | `tasks.data.repository` |
 | `AgendaDatabase`, `DatabaseBuilderFactory`, `DatabaseFactory.{android,ios}` | `tasks.database` (+ `di/` de plataforma) |
@@ -162,9 +162,11 @@ el convention plugin.
 | `core/database/schemas/` | `feature/tasks/database/schemas/` (ver §6) |
 | `feature/tasks`, `feature/calendar` (+ tests unitarios e instrumentados, `CalendarLayout`) | `tasks.presentation.tasks`, `tasks.presentation.calendar` |
 
-Si al mover `WebSocketService` resulta que lo usa algo que no son tareas, se queda en
-`core.data.networking` y se anota en el plan. Esta es la única ubicación que depende de verificar el
-código.
+`WebSocketService` va a `tasks.data.websocket` porque solo lo usan las tareas. Lo que sí se queda en
+core es `install(WebSockets)` dentro de `AgendaHttpClientConfig` (`core.data.networking`): es
+configuración del `HttpClient` compartido, y cualquier feature que en el futuro necesite tiempo real
+lo tendrá disponible. Si otra feature llega a necesitar `WebSocketService`, entonces se sube a
+`core.data.networking`.
 
 ### feature:streaks
 | Hoy | Destino |
