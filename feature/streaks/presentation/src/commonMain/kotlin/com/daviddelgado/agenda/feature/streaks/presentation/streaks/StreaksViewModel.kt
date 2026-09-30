@@ -24,6 +24,6 @@ class StreaksViewModel(observeStreakUseCase: ObserveStreakUseCase) :
 
     override fun onIntent(intent: StreaksIntent) {
         // La observacion es reactiva (StateFlow); Refresh queda reservado para forzar
-        // una resincronizacion remota cuando :core:data implemente el pull manual.
+        // una resincronizacion remota cuando :feature:streaks:data implemente el pull manual.
     }
 }

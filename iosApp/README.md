@@ -14,6 +14,6 @@ Pasos para el equipo iOS:
    `Shared.MainViewControllerKt.mainViewController()` (definida en
    `shared/src/iosMain/kotlin/.../MainViewController.kt`).
 5. Verificar/terminar en Xcode el pinning SSL real de
-   `core/network/src/iosMain/.../HttpClientFactory.ios.kt` y el Keychain de
+   `core/data/src/iosMain/.../core/data/networking/HttpClientFactory.ios.kt` y el Keychain de
    `core/data/src/iosMain/.../SecureStorage.ios.kt`: ambos quedaron implementados
    pero no se han podido compilar ni probar sin Xcode.

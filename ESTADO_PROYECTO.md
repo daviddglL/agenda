@@ -5,7 +5,8 @@ decisiones ya tomadas para no repetir trabajo ni contradecirlas sin querer. La s
 técnica obligatoria (no negociable) sigue estando en [markdown.md](markdown.md); este
 documento es el "qué se ha hecho, qué falta y cómo se arranca" sobre esa base.
 
-Última actualización: 2026-09-30 (sesión 8: refactor a Clean Architecture modular, sección 7terdecies. Sesión 7, 2026-09-18: revisión completa de código, seguridad y
+Última actualización: 2026-09-30 (sesión 8: refactor a Clean Architecture modular, sección 7terdecies).
+Sesión anterior (7, 2026-09-18: revisión completa de código, seguridad y
 consistencia de la documentación pedida por el usuario sin partir de un bug concreto —
 sección 7duodecies. Arreglados: CORS abierto a cualquier origen, `AGENDA_JWT_SECRET` sin
 aviso si falta, callback de permiso `POST_NOTIFICATIONS` que ignoraba el resultado, Keychain
@@ -29,8 +30,8 @@ completas con todos sus campos editables desde la UI, borrado conjunto, tiempo r
 WebSocket, ajustes de cuenta, buscador/filtro de tareas y recordatorios push reales
 (Firebase). Offline-first de verdad (Room como SSOT + tombstones de borrado), validación y
 rate limiting en el servidor, logging centralizado con Napier, CI en GitHub Actions,
-**repo git inicializado**, y **245 tests automáticos en verde** (226 unitarios + 19
-instrumentados de Compose UI en el emulador). Todo verificado en caliente en el emulador
+**repo git inicializado**, y **180 tests de cliente en verde** (161 unitarios + 19
+instrumentados de Compose UI en el emulador; más los del servidor, sección 6). Todo verificado en caliente en el emulador
 Android contra el servidor real, no solo compilado.
 
 ## 1. Arrancar todo (lo primero que querrás hacer)
@@ -55,7 +56,7 @@ Cuenta de pruebas que ya existe en la base de datos local del servidor:
 **`e2e@test.com` / `secreta123`**. Si borras `server/data/`, se regenera vacía y hay que
 registrarse de nuevo desde la app.
 
-Tests: `./gradlew check` (compila todo + ktlint + detekt + lint + los 226 tests unitarios).
+Tests: `./gradlew check` (compila todo + ktlint + detekt + lint + los 161 tests unitarios del cliente).
 Tests de UI de Compose (necesitan el emulador arrancado, sección 6):
 `./gradlew :feature:auth:presentation:connectedDebugAndroidTest :feature:tasks:presentation:connectedDebugAndroidTest`.
 
@@ -96,7 +97,7 @@ cian `#06B6D4` (splash), gris `#9CA3AF` (texto secundario).
 
 Copia pre-migración (plantilla Android Studio + Hilt/Retrofit) en `..\agenda_backup_pre_kmp`.
 
-## 3. Modelo de dominio (`core/domain/.../model/Models.kt`)
+## 3. Modelo de dominio (`feature/tasks/domain/.../model/TaskModels.kt`)
 
 ```kotlin
 data class Task(
@@ -124,7 +125,7 @@ data class IncrementConfig(val amount: Int, val everyValue: Int, val everyUnit: 
 interruptor "Tarea incremental" activo, se generan de golpe `amount` copias adicionales de
 la tarea, cada una `everyValue` `everyUnit` después de la anterior, repitiendo sus
 características básicas (título, descripción, categoría, prioridad, hora, duración,
-recordatorio) — ver `GenerateTaskRepetitionsUseCase` (`core/domain/.../usecase/UseCases.kt`,
+recordatorio) — ver `GenerateTaskRepetitionsUseCase` (`feature/tasks/domain/.../usecase/GenerateTaskRepetitionsUseCase.kt`,
 puro, sin repositorio) y su uso en `TasksViewModel.saveTask()`. Las copias generadas llevan
 `increment = null` (para no volver a generar copias de una copia) e `isCompleted = false`.
 **Todos estos campos tienen ya selector en el formulario de tareas**
@@ -133,11 +134,11 @@ puro, sin repositorio) y su uso en `TasksViewModel.saveTask()`. Las copias gener
 interruptor que revela "Número de repeticiones" / "Cada cuánto" / unidad.
 
 **Si añades o cambias un campo de tarea, hay que tocarlo en estos cuatro sitios:**
-1. `core/domain/.../model/Models.kt` (fuente de verdad conceptual)
-2. `core/database/.../TaskEntity.kt` + `TaskDao.kt` (Room; enums como `.name` en texto)
-3. `core/network/.../dto/TaskDtos.kt` + `core/data/.../task/TaskDtoMapper.kt` (contrato de red)
+1. `feature/tasks/domain/.../model/TaskModels.kt` (fuente de verdad conceptual)
+2. `feature/tasks/database/.../entity/TaskEntity.kt` + `dao/TaskDao.kt` (Room; enums como `.name` en texto)
+3. `feature/tasks/data/.../dto/TaskDtos.kt` + `feature/tasks/data/.../mapper/TaskDtoMapper.kt` (contrato de red)
 4. `server/.../dto/Dtos.kt` + `server/.../db/Tables.kt` + `server/.../repository/TaskRepository.kt`
-   ...y también el formulario en `feature/tasks/.../TasksScreen.kt` + `TasksContract.kt` +
+   ...y también el formulario en `feature/tasks/presentation/.../TasksScreen.kt` + `TasksContract.kt` +
    `TasksViewModel.kt` si el campo debe ser editable desde la UI.
 
 Borrado conjunto disponible en todos los niveles, **con selección múltiple real en la UI**
@@ -196,18 +197,18 @@ socket, crea una tarea por HTTP desde otro cliente y comprueba que llega el avis
 
 ## 5. Cómo está conectado el cliente con el servidor
 
-**URL base por plataforma** (`core/data/.../di/DataModule.android.kt` / `.ios.kt`):
+**URL base por plataforma** (`core/data/.../di/CoreDataModule.android.kt` / `.ios.kt`):
 - Android debug: `http://10.0.2.2:8080/` — 10.0.2.2 es como el emulador ve el `localhost`
   del PC. **Android release** usa `ProductionConfig.BASE_URL` (ver sección 8).
 - iOS: `http://localhost:8080/` (el simulador comparte red con el Mac) — sin distinción
-  debug/release todavía, ver el TODO en `DataModule.ios.kt` (sección 8).
+  debug/release todavía, ver el TODO en `CoreDataModule.ios.kt` (sección 8).
 - Móvil físico: pon la IP del PC en la red local (`http://192.168.x.y:8080/`) en la
   constante `ANDROID_EMULATOR_BASE_URL`.
 
 Android solo permite HTTP en claro para esas direcciones de desarrollo, por
 [network_security_config.xml](androidApp/src/main/res/xml/network_security_config.xml).
 
-**Offline-first de verdad** (`core/data/.../task/TaskRepositoryImpl.kt`): Room es la única
+**Offline-first de verdad** (`feature/tasks/data/.../repository/TaskRepositoryImpl.kt`): Room es la única
 fuente de verdad; la UI nunca espera a la red.
 - Toda escritura va primero a Room con `pendingSync = true` y después se empuja al servidor;
   si el empuje funciona, se marca `pendingSync = false`.
@@ -229,37 +230,38 @@ fuente de verdad; la UI nunca espera a la red.
   (`EncryptedSharedPreferences` / Keychain) vía `TokenProvider`.
 - El refresco automático está conectado de verdad: ante un 401, el plugin `Auth` de Ktor
   llama a `POST /auth/refresh`, guarda el par nuevo y reintenta la petición; si el refresco
-  también falla, limpia los tokens (`core/network/.../AgendaHttpClientConfig.kt`).
+  también falla, limpia los tokens (`core/data/.../networking/AgendaHttpClientConfig.kt`).
 - Tras login/registro/logout se llama a `AuthApi.forgetCachedTokens()` para que el plugin
   Bearer no siga usando el token cacheado.
 - El splash intenta `restoreSession()` (`GET /users/me`): si el token guardado sigue siendo
   válido entra directo a Home, si no va al login. **Ajustes > Cerrar sesión / Borrar cuenta**
-  (`feature/settings`) hacen el camino inverso: vuelven al login.
+  (`feature/auth/presentation/.../settings`) hacen el camino inverso: vuelven al login.
 
 **Errores legibles**: el cliente usa `expectSuccess = true` y `apiCall {}` traduce cualquier
 4xx/5xx a `ApiException(statusCode, message)` con el `message` que manda el servidor.
 
-## 6. Tests (245 automáticos, todos en verde)
+## 6. Tests (180 de cliente, todos en verde)
 
-`./gradlew check` ejecuta los 226 unitarios (+ktlint+detekt+lint). Los 19 instrumentados de
-Compose necesitan el emulador arrancado (ver sección 1).
+`./gradlew check` ejecuta los 161 unitarios del cliente (+ktlint+detekt+lint); sumados sobre las
+variantes debug y release, `test-results` da 322. Los 19 instrumentados de Compose (auth 7,
+tasks 8, calendario 4) necesitan el emulador arrancado (ver sección 1).
 
 | Módulo | Tests | Qué cubre |
 |---|---|---|
-| `:core:common` | 2 | `AgendaLogger` (envoltorio de Napier usado en los fallos silenciosos de sync y de registro del token FCM) |
-| `:core:domain` | 31 | casos de uso con Fake Repositories, defaults del modelo, borrado conjunto, `GenerateTaskRepetitionsUseCase` (fechas, ids, campos copiados, casos sin incremento), `RegisterFcmTokenUseCase`, **`RequestPasswordResetUseCase` y `ResetPasswordUseCase`** |
-| `:core:data` | 49 | mapeos, repositorio offline-first **con tombstones**, login/sesión, refresco de token, **periodo de gracia de rachas** |
-| `:feature:login` | 9 unit + 7 UI | reductor MVI (incluye **registrar el token FCM tras un login correcto, y no llamar al servidor si no hay token disponible**) + **Compose: campos, error, login OK/fallido, navegación, y `pulsarOlvidasteTuContrasenaNavegaAlFormularioDeRecuperacion`** |
-| `:feature:register` | 5 | reductor MVI de registro |
-| `:feature:tasks` | 26 unit + 8 UI | reductor MVI (formulario completo, selección múltiple, **crear tarea incremental genera sus copias, editar una existente no las regenera**, **buscador por título y filtro por categoría, `SelectAll` respeta el filtro activo**) + **Compose: estado vacío, crear tarea, validación, fecha inicial desde el calendario, el formulario es deslizable al activar "incremental", escribir en el buscador oculta las tareas que no coinciden** |
-| `:feature:calendar` | 7 unit + 4 UI | reductor MVI de calendario (incluye conteo de tareas por día) + `CalendarLayoutTest` (tamaño de celda cuadrado dinámico, función pura) + **Compose: la cuadrícula no superpone días, tocar un día concreto selecciona ese día y no otro, un día con tareas muestra cuántas tiene, los botones de navegación de mes tienen descripción accesible** |
-| `:feature:streaks` | 3 | reductor MVI de rachas |
-| `:feature:settings` | 6 | logout, borrar cuenta (éxito y fallo del servidor) |
-| `:feature:passwordreset` | 9 | **nuevo módulo**: reductor MVI de `ForgotPasswordViewModel` (4: guarda el email escrito, no llama al servidor con email vacío, éxito dispara `CodeSent`, error del servidor se muestra) y de `ResetPasswordViewModel` (5: código que no tiene 6 dígitos no llama al servidor, contraseñas que no coinciden no resetean, éxito dispara `PasswordReset`, código inválido del servidor se muestra, el email llega fijo por parámetro sin formulario propio) |
-| `:shared` | 7 | `HomeNavigator` (4: qué pestaña se ve y qué fecha queda pendiente al abrir un día del calendario) + `SplashSessionHandler` (3: **registra el token FCM también al recuperar sesión en el splash**) |
+| `:core:domain` | 2 | `AgendaLogger` (envoltorio de Napier usado en los fallos silenciosos de sync y de registro del token FCM) |
+| `:core:data` | 0 | sin tests: `TokenRefreshTest` vive en `:feature:tasks:data` (ejercita el refresco de token de core a través de `TaskApi`; en core haría que core dependiera de una feature) |
+| `:feature:auth:domain` | 11 | casos de uso con Fake Repositories, `RegisterFcmTokenUseCase`, **`RequestPasswordResetUseCase` y `ResetPasswordUseCase`** |
+| `:feature:auth:data` | 13 | login/sesión, logout y borrado de cuenta (también limpian tombstones), tokens |
+| `:feature:auth:presentation` | 29 unit + 7 UI | reductores MVI de login (incluye **registrar el token FCM tras un login correcto, y no llamar al servidor si no hay token disponible**), registro, ajustes (logout, borrar cuenta, éxito y fallo del servidor), `ForgotPasswordViewModel` y `ResetPasswordViewModel` + **Compose: campos, error, login OK/fallido, navegación, y `pulsarOlvidasteTuContrasenaNavegaAlFormularioDeRecuperacion`** |
+| `:feature:tasks:domain` | 20 | casos de uso con Fake Repositories, defaults del modelo, borrado conjunto, `GenerateTaskRepetitionsUseCase` (fechas, ids, campos copiados, casos sin incremento) |
+| `:feature:tasks:data` | 32 | mapeos, repositorio offline-first **con tombstones**, refresco de token (`TokenRefreshTest`) |
+| `:feature:tasks:presentation` | 35 unit + 12 UI | reductor MVI de tareas (formulario completo, selección múltiple, **crear tarea incremental genera sus copias, editar una existente no las regenera**, **buscador por título y filtro por categoría, `SelectAll` respeta el filtro activo**) y de calendario (conteo de tareas por día) + `CalendarLayoutTest` + **Compose (tareas 8): estado vacío, crear tarea, validación, fecha inicial desde el calendario, formulario deslizable, buscador; (calendario 4): la cuadrícula no superpone días, tocar un día selecciona ese día, un día con tareas muestra cuántas tiene, botones de mes con descripción accesible** |
+| `:feature:streaks:data` | 8 | rachas, **periodo de gracia** |
+| `:feature:streaks:presentation` | 3 | reductor MVI de rachas |
+| `:shared` | 8 | `HomeNavigator` (4), `SplashSessionHandler` (3: **registra el token FCM también al recuperar sesión en el splash**) y `AppModulesTest` (1, grafo de Koin; ver 7terdecies para sus límites) |
 | `:server` | 72 | API completa (incluida `/tasks/ws`), JWT y bcrypt, validación de tareas y de email, rate limiting de `/auth`, `ReminderScheduler` (lógica pura de cuándo toca un recordatorio, 10), `ReminderJob` (bucle en segundo plano, 4), `PushSender` (Firebase, 2), `FcmTokenRoutes` (3), **`PasswordResetRoutesTest` (9: pedir código con email existente/inexistente siempre responde 204, resetear con código correcto permite loguearse con la contraseña nueva, código incorrecto/caducado/agotado tras 5 intentos se rechaza, pedir código dos veces invalida el primero, resetear invalida el refresh token anterior, contraseña nueva de menos de 6 caracteres se rechaza), `EmailSenderTest` (5: `SmtpEmailSender` con `runCatching` ante un host inalcanzable, `NoOpEmailSender`, `provideEmailSender` con credenciales completas/incompletas), `JwtConfigTest` ampliado con el claim `tv` de `token_version`, `AuthRoutesTest` ampliado con `/auth/refresh` rechazando un `token_version` desactualizado** |
 
-Comandos sueltos: `./gradlew :core:data:testDebugUnitTest`,
+Comandos sueltos: `./gradlew :feature:tasks:data:testDebugUnitTest`,
 `./gradlew :feature:auth:presentation:connectedDebugAndroidTest :feature:tasks:presentation:connectedDebugAndroidTest`
 (instalan un APK de test en el emulador; tarda ~1-2 min la primera vez).
 
@@ -268,11 +270,11 @@ Cómo están montados (para escribir más igual):
   ViewModel necesitan `Dispatchers.setMain(UnconfinedTestDispatcher())` en `@BeforeTest`, y
   los efectos se recogen con `viewModel.effect.onEach { }.launchIn(backgroundScope)` antes
   de lanzar la intención. La red se simula con `MockEngine` instalando los plugins reales
-  de la app (`core/data/.../fake/MockHttpClient.kt`). `assertEquals(null, x)` /
+  de la app (`feature/{auth,tasks}/data/src/commonTest/.../fake/MockHttpClient.kt`). `assertEquals(null, x)` /
   `assertEquals(emptyList(), x)` no compilan por inferencia de tipos en KMP: usa
   `assertNull` / `assertTrue(x.isEmpty())` o `listOf<Tipo>(...)` explícito.
-- **Instrumentados de Compose** (`src/androidInstrumentedTest`, en `feature:login`,
-  `feature:tasks` y `feature:calendar`): `createAndroidComposeRule<ComponentActivity>()`, montan la pantalla real
+- **Instrumentados de Compose** (`src/androidInstrumentedTest`, en `feature:auth:presentation` y
+  `feature:tasks:presentation`): `createAndroidComposeRule<ComponentActivity>()`, montan la pantalla real
   pasando un ViewModel real + un Fake Repository propio del fichero de test (no comparten
   código con `commonTest`: son un source set KMP distinto que no lo hereda por defecto).
   Localizan campos por su `label` (`onNodeWithText("Email")`) porque Material3 fusiona la
@@ -329,7 +331,7 @@ Cómo están montados (para escribir más igual):
   el formulario en modo "Editar tarea" con sus datos. Tarea de prueba borrada al terminar
   para no dejar basura en la cuenta `e2e@test.com`.
 - `./gradlew check` -> BUILD SUCCESSFUL (148 unitarios + ktlint + detekt + lint).
-- `./gradlew :feature:auth:presentation:connectedDebugAndroidTest :feature:tasks:presentation:connectedDebugAndroidTest`
+- `./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest :feature:calendar:connectedDebugAndroidTest`
   -> 14/14 tests de Compose UI en verde en el emulador Pixel_6a real.
 - Pendiente de decisión del usuario: commitear estos cambios (working tree tenía cambios sin
   commitear al terminar la sesión).
@@ -369,7 +371,7 @@ Continuación de la misma sesión 5, tras pedir tres retoques concretos.
     de forma determinista, que el `Column` (con `Modifier.testTag("taskFormScroll")`) expone
     `SemanticsActions.ScrollBy` — RED/GREEN verificado quitando y devolviendo el fix.
 - `./gradlew check` -> BUILD SUCCESSFUL (151 unitarios + ktlint + detekt + lint).
-- `./gradlew :feature:auth:presentation:connectedDebugAndroidTest :feature:tasks:presentation:connectedDebugAndroidTest`
+- `./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest :feature:calendar:connectedDebugAndroidTest`
   -> 16/16 tests de Compose UI en verde en el emulador Pixel_6a real.
 
 ## 7quater. Verificado en caliente el 2026-09-14 (tarea incremental genera copias reales)
@@ -396,7 +398,7 @@ Continuación de la misma sesión 5, tras pedir que "incremental" haga algo de v
 - `./gradlew check` -> BUILD SUCCESSFUL (160 unitarios + ktlint + detekt + lint, incluida la
   subida de `LongParameterList.constructorThreshold` a 10 en `config/detekt/detekt.yml`
   porque `TasksViewModel` pasó a recibir 9 casos de uso).
-- `./gradlew :feature:auth:presentation:connectedDebugAndroidTest :feature:tasks:presentation:connectedDebugAndroidTest`
+- `./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest :feature:calendar:connectedDebugAndroidTest`
   -> 16/16 en verde (sin cambios en la UI instrumentada, la generación de copias no se probó
   por Compose UI test, solo a nivel de `TasksViewModel` + a mano en el emulador).
 
@@ -493,7 +495,7 @@ Verificación de esta sesión:
   `PushSenderTest` (2), `FcmTokenRoutesTest` (3) y la validación/rate limiting ya cubiertas
   dentro de `AuthRoutesTest`/`TaskRoutesTest`).
 - Emulador Pixel_6a (`emulator-5554`, ya arrancado, confirmado con `adb devices` antes de
-  empezar) + `./gradlew :feature:auth:presentation:connectedDebugAndroidTest :feature:tasks:presentation:connectedDebugAndroidTest`
+  empezar) + `./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest :feature:calendar:connectedDebugAndroidTest`
   -> **18/18 en verde** (antes 16): login 6/6, calendar 4/4 (incluida
   `losBotonesDeNavegacionDelMesTienenDescripcionAccesible`, Task 2, primera vez en un
   dispositivo real), tasks 8/8 (incluida `escribirEnElBuscadorOcultaLasTareasQueNoCoinciden`,
@@ -575,7 +577,7 @@ Verificación de esta sesión:
 - `./gradlew :server:test` -> confirmado sin regresión de comportamiento tras el arreglo de
   detekt (mismos 72 tests, todos en verde).
 - Emulador Pixel_6a (`emulator-5554`, confirmado con `adb devices` antes de empezar) +
-  `./gradlew :feature:auth:presentation:connectedDebugAndroidTest :feature:tasks:presentation:connectedDebugAndroidTest`
+  `./gradlew :feature:login:connectedDebugAndroidTest :feature:tasks:connectedDebugAndroidTest :feature:calendar:connectedDebugAndroidTest`
   -> **19/19 en verde** (antes 18): login 7/7 (incluida
   `pulsarOlvidasteTuContrasenaNavegaAlFormularioDeRecuperacion`, primera vez en un dispositivo
   real), tasks 8/8, calendar 4/4. 0 fallos, 0 saltados.
@@ -791,10 +793,16 @@ Rama `refactor/clean-architecture-modular`, en 6 tareas, siguiendo la estructura
   `core:network` ni `core:database`); `shared` con paquetes `di` y `navigation`. Paquetes
   `com.daviddelgado.agenda.<core|feature>.[<feature>.]<capa>.<subpaquete>`.
 - **Test nuevo:** `AppModulesTest` (`shared`, androidUnitTest) usa `verify()` de Koin para
-  comprobar que el grafo completo resuelve todas las dependencias (al dividir los módulos es
-  fácil perder una definición, y fallaría al abrir la pantalla, no al compilar). `extraTypes`
-  solo lleva `Context`, `HttpClientConfig`, `HttpClientEngine` y `List` (parámetros de
-  constructores de Android/Ktor/stdlib que `verify` inspecciona por reflexión).
+  comprobar dependencias de constructor. **Alcance limitado:** `verify()` de Koin 4.0.0 solo
+  revisa los constructores del tipo declarado de cada definición. No mira los enlaces con tipo
+  de interfaz (`single<TaskRepository> { ... }`, `AuthRepository`, `StreakRepository`,
+  `TokenProvider`, `FcmTokenProvider`) ni lo que llaman las lambdas, así que no garantiza que
+  todo el grafo resuelva. `extraTypes` lleva `Context` (lo da `androidContext()`),
+  `HttpClientEngine` y `HttpClientConfig` (solo por el constructor propio de `HttpClient`) y
+  `List` (por `NetworkConfig.certificatePinsSha256`, que provee como instancia el módulo de
+  plataforma); `List` es un punto ciego para un futuro parámetro `List` de constructor.
+  **Pendiente:** reforzar el test con `singleOf(::Impl) { bind<I>() }` en los módulos o con un
+  test de resolución real (`koinApplication` + `get()` de los tipos clave).
 - **Excepciones de dependencia entre features (solo dos):** `auth:data -> tasks:database`
   (logout / borrado de cuenta limpian las tareas locales) y `streaks:data -> tasks:database`
   (la racha se calcula desde las tareas completadas).
@@ -821,15 +829,15 @@ Rama `refactor/clean-architecture-modular`, en 6 tareas, siguiendo la estructura
 No hay todavía un backend desplegado en un dominio real, así que no hay pines de
 certificado de verdad que fijar. Lo que sí está listo:
 
-- `core/network/.../ProductionConfig.kt`: `BASE_URL` y `CERTIFICATE_PINS_SHA256` como
+- `core/data/.../networking/ProductionConfig.kt`: `BASE_URL` y `CERTIFICATE_PINS_SHA256` como
   placeholders documentados, con el comando `openssl` exacto para sacar el pin SHA-256 de
   un certificado real cuando exista, y la recomendación de incluir un pin de respaldo.
-- **Android**: `core/data`'s `DataModule.android.kt` elige entre el servidor de desarrollo
+- **Android**: `core/data`'s `CoreDataModule.android.kt` elige entre el servidor de desarrollo
   y `ProductionConfig` según `BuildConfig.DEBUG` (requiere `buildFeatures.buildConfig = true`
   en `core/data/build.gradle.kts`, ya añadido). Verificado compilando **ambas** variantes
   (`compileDebugKotlinAndroid` y `compileReleaseKotlinAndroid`) y con `assembleRelease`
   completo pasando por R8.
-- **iOS**: sigue sin esta distinción (ver TODO en `DataModule.ios.kt`) porque Kotlin/Native
+- **iOS**: sigue sin esta distinción (ver TODO en `CoreDataModule.ios.kt`) porque Kotlin/Native
   no tiene un `BuildConfig.DEBUG` automático; hay que leerlo del scheme de Xcode cuando haya
   Mac disponible para probarlo.
 - Rellenar `ProductionConfig` de verdad (URL + pines) es la única tarea pendiente antes de
@@ -867,7 +875,7 @@ Code con las tareas de arriba.
 
 1. **iOS sigue siendo solo Kotlin**: el proyecto Xcode real no se puede crear en Windows;
    instrucciones en [iosApp/README.md](iosApp/README.md). Pinning SSL, Keychain y el
-   switch debug/produccion de `DataModule.ios.kt` (sección 8) están escritos pero no
+   switch debug/produccion de `CoreDataModule.ios.kt` (sección 8) están escritos pero no
    compilados en Xcode.
 2. **`ProductionConfig` sin rellenar de verdad**: falta un dominio real desplegado y sus
    pines de certificado (sección 8).

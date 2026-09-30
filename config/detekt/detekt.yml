@@ -12,7 +12,7 @@ complexity:
     threshold: 60
   # Un DAO de Room es por naturaleza una lista larga de consultas (leer, filtrar, borrados
   # conjuntos, marcas de sincronizacion), y los repositorios implementan esa misma interfaz:
-  # el limite por defecto de 11 funciones no encaja con :core:database ni con :core:data.
+  # el limite por defecto de 11 funciones no encaja con :feature:tasks:database ni con :feature:tasks:data.
   TooManyFunctions:
     thresholdInFiles: 20
     thresholdInClasses: 20
