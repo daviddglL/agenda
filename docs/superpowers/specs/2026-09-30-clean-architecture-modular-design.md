@@ -56,7 +56,7 @@ agenda/
     ├── auth/
     │   ├── domain/        model/  repository/  usecase/  di/
     │   ├── data/          remote/  dto/  repository/  fcm/  di/
-    │   └── presentation/  login/  register/  forgot_password/  reset_password/  settings/  di/
+    │   └── presentation/  login/  register/  forgotpassword/  resetpassword/  settings/  di/
     ├── tasks/
     │   ├── domain/        model/  repository/  usecase/  di/
     │   ├── data/          remote/  dto/  websocket/  mapper/  repository/  di/
@@ -96,10 +96,14 @@ androidApp ──► shared
 
 - `domain` no depende de `data`, `presentation`, Room, Ktor ni Compose.
 - `presentation` **nunca** depende de `data` ni de `database`.
-- Una feature no depende de otra, con **una única excepción documentada**:
-  `feature:streaks:data ──► feature:tasks:database`, porque la racha se calcula con las fechas de las
-  tareas completadas (`TaskDao.observeCompletedDateEpochDays()`). Es una dependencia de datos a datos
-  y no rompe la regla de capas.
+- Una feature no depende de otra, con **dos excepciones documentadas**, ambas de datos a datos
+  (no rompen la regla de capas):
+  - `feature:streaks:data ──► feature:tasks:database`: la racha se calcula con las fechas de las
+    tareas completadas (`TaskDao.observeCompletedDateEpochDays()`).
+  - `feature:auth:data ──► feature:tasks:database`: `AuthRepositoryImpl` vacía las tareas locales y
+    las borradas pendientes al hacer logout o borrar la cuenta (usa `TaskDao` y
+    `PendingDeletionDao`). Se decidió (2026-09-30) mantener esta dependencia directa en lugar de
+    abstraerla con una interfaz en core, para no tocar `AuthRepositoryImpl` ni su test.
 - `feature:auth:domain` sí la pueden usar otras features y `shared`, porque `User` y la sesión son
   la entrada a toda la app. Hoy solo la usan `shared` (splash, registrar el token FCM) y
   `presentation` de auth.
@@ -142,8 +146,17 @@ el convention plugin.
 | Sus tests (`AuthUseCasesTest`, `RegisterFcmTokenUseCaseTest`, `RequestPasswordResetUseCaseTest`, `ResetPasswordUseCaseTest`, `FakeAuthRepository`) | tests de `auth:domain` |
 | `AuthApi`, `AuthDtos` (salvo lo que queda en core) | `auth.data.remote`, `auth.data.dto` |
 | `AuthRepositoryImpl` (+ test) | `auth.data.repository` |
-| `FcmTokenProvider` + `LoginModule.{android,ios}` (su `actual`) | `auth.data.fcm` + `auth.data.di` (plataforma) |
-| `feature/login`, `register`, `passwordreset`, `settings` (Contract/Screen/ViewModel/Module + tests unitarios e instrumentados) | `auth.presentation.{login,register,forgot_password,reset_password,settings}` |
+| Interfaz `FcmTokenProvider` (la usan `LoginViewModel` y `SplashSessionHandler`, así que no puede estar en `data`) | `auth.domain.fcm` |
+| Implementaciones de `FcmTokenProvider` (`LoginModule.android.kt` con Firebase, `LoginModule.ios.kt` noop) | `auth.data.di` (`AuthDataModule.{android,ios}.kt`: `actual val platformAuthDataModule`, con la implementación privada dentro, igual que hoy) |
+| `feature/login`, `register`, `passwordreset`, `settings` (Contract/Screen/ViewModel/Module + tests unitarios e instrumentados) | `auth.presentation.{login,register,forgotpassword,resetpassword,settings}` |
+
+Los paquetes no llevan guion bajo (`forgotpassword`, no `forgot_password`): las reglas
+`PackageNaming` de detekt y `package-name` de ktlint lo rechazan.
+
+De `AuthDtos.kt` se quedan en core (`core.data.networking.dto`) `RefreshRequest`, `AuthResponse`,
+`UserResponse` y `ErrorResponse`, porque los usan el refresh del token y `ApiException`. A
+`auth.data.dto` van `LoginRequest`, `RegisterRequest`, `FcmTokenRequest`, `ForgotPasswordRequest` y
+`ResetPasswordRequest`.
 | Los 4 `*Module.kt` de presentación | `auth.presentation.di.authPresentationModule` |
 
 ### feature:tasks
@@ -217,9 +230,11 @@ mismo `libs.versions.toml`.
 |---|---|---|
 | `agenda.kmp.library` | kotlin-multiplatform + android-library; `jvmToolchain(17)`; targets `androidTarget`, `iosX64`, `iosArm64`, `iosSimulatorArm64`; `compileSdk 34`, `minSdk 26`, Java 17; `namespace` sacado del path; `kotlin("test")` + coroutines-test en `commonTest` | `core:domain`, `core:data`, `feature:*:domain`, `feature:*:data`, `feature:tasks:database` |
 | `agenda.cmp.library` | `agenda.kmp.library` + compose-multiplatform + compose-compiler + runtime/foundation/material3/ui | `core:designsystem`, `core:presentation` |
-| `agenda.cmp.feature` | `agenda.cmp.library` + koin core/compose/viewmodel + `core:presentation` + `core:designsystem` + icons-extended + `testInstrumentationRunner` y dependencias de `androidInstrumentedTest` | `feature:*:presentation` |
+| `agenda.cmp.feature` | `agenda.cmp.library` + koin compose/viewmodel + icons-extended + `testInstrumentationRunner` y dependencias de `androidInstrumentedTest` | `feature:*:presentation` |
 | `agenda.room` | ksp + room; `schemaDirectory("$projectDir/schemas")`; `ksp{Android,IosX64,IosArm64,IosSimulatorArm64}` con room-compiler; `api(room-runtime)` | `feature:tasks:database` |
 | `agenda.android.application` | android-application + kotlin-android + compose-compiler; `compileSdk`/`minSdk`/`targetSdk`, Java 17 | `androidApp` |
+
+Las dependencias entre proyectos (`projects.core.*`, `projects.feature.*`) **no** van en los convention plugins: cada módulo las declara en su `build.gradle.kts`, para que se vea de un vistazo de qué depende y para que el plugin no haga referencia a módulos que todavía no existen durante la migración.
 
 Lo que no es común (p. ej. `buildConfig = true` en `core:data`, `kotlin-serialization`, el plugin
 de google-services en `androidApp`, el framework `Shared`) se queda en el `build.gradle.kts` del
@@ -231,20 +246,26 @@ cambios. `build-logic` se excluye de ktlint/detekt, igual que en Squadfy.
 Cada fase termina con `./gradlew check` en verde y un commit convencional. Todo se mueve con `git mv`
 para conservar el historial.
 
+El orden sale **las features primero y core al final**. Así `core` no llega a depender de una
+feature en ningún momento, ni siquiera de forma temporal: las features nuevas dependen de los
+módulos core antiguos (`core:common`, `core:network`, `core:database`) mientras existen, y la
+consolidación de core solo tiene que reescribir `import`s.
+
 1. **build-logic**: crear los 5 plugins y pasar los módulos **actuales** a usarlos, sin mover
    código. Commit: `build: añade build-logic con convention plugins`.
-2. **core**: crear `core:presentation`; mover `core:common` y `core:network` a `core:domain`,
-   `core:data` y `core:presentation`; separar el DI de core; borrar `core:common` y `core:network`.
-   Temporalmente, `core:data` sigue conteniendo los repositorios de auth, tareas y rachas hasta su
-   fase. Commit: `refactor(core): ...`.
-3. **feature/auth**: crear `auth/{domain,data,presentation}`; mover lo de §4; borrar
+2. **feature/auth**: crear `auth/{domain,data,presentation}`; sacar lo de §4 de `core:domain`,
+   `core:data` y `core:network`; `auth:data` depende temporalmente de `core:database`; borrar
    `feature:login`, `register`, `passwordreset` y `settings`. Commit: `refactor(auth): ...`.
-4. **feature/tasks**: crear `tasks/{domain,data,database,presentation}`; mover lo de §4 y §6;
-   borrar `core:database`, `feature:tasks` y `feature:calendar`. Verificar el `4.json`. Commit:
-   `refactor(tasks): ...`.
-5. **feature/streaks**: crear `streaks/{domain,data,presentation}`; con esto `core:domain` y
-   `core:data` quedan solo con lo transversal. Borrar `feature:streaks`. Commit:
-   `refactor(streaks): ...`.
+3. **feature/streaks**: crear `streaks/{domain,data,presentation}`; `streaks:data` depende
+   temporalmente de `core:database`; borrar `feature:streaks`. Commit: `refactor(streaks): ...`.
+4. **feature/tasks**: `core:database` pasa entero a `feature:tasks:database` (§6); crear
+   `tasks/{domain,data,presentation}`; `auth:data` y `streaks:data` pasan a depender de
+   `tasks:database`; borrar `core:database`, `feature:tasks` y `feature:calendar`. Verificar el
+   `4.json`. Commit: `refactor(tasks): ...`.
+5. **core**: crear `core:presentation`; `core:common` → `core:domain` (logger, util) +
+   `core:presentation` (mvi); `core:network` → `core:data.networking`; `SecureStorage` y
+   `TokenProviderImpl` → `core.data.session`; los paquetes de core pasan a `...agenda.core.*`;
+   borrar `core:common` y `core:network`. Commit: `refactor(core): ...`.
 6. **shared + cierre**: `shared/{di,navigation}`; revisar `ci.yml`; comprobar que ningún módulo
    rompe las reglas de §3 con `grep` de imports; prueba manual en el emulador (§1, criterio 4);
    actualizar `markdown.md` (lista de módulos del punto de arquitectura) y `ESTADO_PROYECTO.md`
@@ -273,7 +294,7 @@ AGENTS.md).
 | Riesgo | Mitigación |
 |---|---|
 | Room no encuentra los esquemas o cambia la identidad de la BD | §6: renombrar la carpeta y comparar el `4.json` regenerado |
-| Ciclo de dependencias `core:data` ↔ features durante la transición | Orden de fases: core primero con los repositorios dentro y luego salen feature a feature; nunca hay un core que dependa de una feature |
+| Ciclo de dependencias `core:data` ↔ features durante la transición | Orden de fases (§8): primero salen las features de core y al final se consolida core; nunca hay un core que dependa de una feature |
 | Koin falla en tiempo de ejecución (una definición se pierde al dividir módulos) | Prueba manual completa en el emulador en la fase 6; conviene además probar el arranque al final de las fases 3 y 4 |
 | Un fake duplicado (`FakeTaskDao`, `FakeAuthRepository`) diverge | Son copias literales; se anota que la fuente de la verdad es la de `data`/`domain` de su feature |
 | El proyecto iOS no compila | Validación parcial en Windows y aviso explícito en `ESTADO_PROYECTO.md` |
