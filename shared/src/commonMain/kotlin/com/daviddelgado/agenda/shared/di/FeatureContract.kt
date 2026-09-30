@@ -44,6 +44,7 @@ import com.daviddelgado.agenda.feature.tasks.domain.usecase.ToggleTaskCompletion
 import com.daviddelgado.agenda.feature.tasks.domain.usecase.UpsertTaskUseCase
 import com.daviddelgado.agenda.feature.tasks.presentation.calendar.CalendarViewModel
 import com.daviddelgado.agenda.feature.tasks.presentation.tasks.TasksViewModel
+import com.daviddelgado.agenda.shared.navigation.SplashSessionHandler
 import io.ktor.client.HttpClient
 import org.koin.core.module.Module
 import kotlin.reflect.KClass
@@ -144,9 +145,17 @@ object FeatureContract {
             AppFeature.STREAKS to (tasksDatabaseTypes + streaksTypes),
         )
 
+    /**
+     * Tipos de `sharedModule` que la app resuelve nada mas arrancar (el splash) y de los que
+     * depende una feature. Solo entran en [missingTypes] (comprobacion de arranque), NO en
+     * [requiredTypes]: la igualdad exacta con el modulo de la feature no debe cambiar.
+     */
+    private val appEntryTypes: Map<AppFeature, Set<KClass<*>>> =
+        mapOf(AppFeature.AUTH to setOf(SplashSessionHandler::class))
+
     /** Por feature, los tipos del contrato que NO estan en [declared]; solo las features con alguno ausente. */
     fun missingTypes(declared: Set<KClass<*>>): Map<AppFeature, Set<KClass<*>>> =
         requiredTypes
-            .mapValues { (_, required) -> required - declared }
+            .mapValues { (feature, required) -> (required + appEntryTypes[feature].orEmpty()) - declared }
             .filterValues { it.isNotEmpty() }
 }

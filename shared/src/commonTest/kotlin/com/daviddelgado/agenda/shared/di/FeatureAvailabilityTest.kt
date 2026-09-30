@@ -2,6 +2,7 @@ package com.daviddelgado.agenda.shared.di
 
 import com.daviddelgado.agenda.feature.tasks.data.remote.TaskApi
 import com.daviddelgado.agenda.feature.tasks.database.dao.TaskDao
+import com.daviddelgado.agenda.shared.navigation.SplashSessionHandler
 import kotlin.reflect.KClass
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -9,8 +10,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+private class FakeLinkageError : Error("koin internal api changed")
+
 class FeatureAvailabilityTest {
-    private val all: Set<KClass<*>> = FeatureContract.requiredTypes.values.flatten().toSet()
+    private val all: Set<KClass<*>> =
+        FeatureContract.requiredTypes.values.flatten().toSet() + SplashSessionHandler::class
 
     @AfterTest
     fun reset() = FeatureAvailability.update(emptySet())
@@ -54,8 +58,9 @@ class FeatureAvailabilityTest {
     }
 
     @Test
-    fun `un Error de la API interna de Koin no se propaga`() {
-        val result = checkFeatures({ throw NoSuchMethodError("x") }, { })
+    fun `un Error de enlace de la API interna de Koin no se propaga`() {
+        // Error comun (no NoSuchMethodError, que es solo JVM): simula un cambio de API de Koin.
+        val result = checkFeatures({ throw FakeLinkageError() }, { })
         assertEquals(emptySet(), result)
     }
 
@@ -63,5 +68,14 @@ class FeatureAvailabilityTest {
     fun `un logger que lanza no se propaga y se conserva el conjunto calculado`() {
         val result = checkFeatures({ all - TaskApi::class }, { throw IllegalStateException("log roto") })
         assertEquals(setOf(AppFeature.TASKS), result)
+    }
+
+    @Test
+    fun `sin SplashSessionHandler la feature AUTH no esta disponible`() {
+        val declared = all - SplashSessionHandler::class
+        assertEquals(setOf(AppFeature.AUTH), FeatureContract.missingTypes(declared).keys)
+        val logs = mutableListOf<String>()
+        assertEquals(setOf(AppFeature.AUTH), checkFeatures({ declared }, { logs += it }))
+        assertTrue(logs.single().contains("SplashSessionHandler"))
     }
 }

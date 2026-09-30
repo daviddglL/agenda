@@ -11,6 +11,8 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.daviddelgado.agenda.core.domain.logger.AgendaLogger
 import com.daviddelgado.agenda.feature.auth.domain.usecase.RegisterFcmTokenUseCase
+import com.daviddelgado.agenda.shared.di.AppFeature
+import com.daviddelgado.agenda.shared.di.FeatureAvailability
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CoroutineDispatcher
@@ -41,6 +43,11 @@ class AgendaFirebaseMessagingService(
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
+        // Sin AUTH, RegisterFcmTokenUseCase no existe en Koin: resolverlo tumbaria el proceso.
+        if (!FeatureAvailability.isAvailable(AppFeature.AUTH)) {
+            AgendaLogger.w(LOG_TAG, "Token FCM nuevo ignorado: la feature AUTH no esta disponible")
+            return
+        }
         scope.launch {
             registerFcmToken(token)
                 .onFailure { AgendaLogger.w(LOG_TAG, "No se pudo registrar el nuevo token FCM", it) }

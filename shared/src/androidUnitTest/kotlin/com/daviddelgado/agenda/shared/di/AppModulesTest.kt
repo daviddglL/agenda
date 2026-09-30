@@ -3,6 +3,7 @@ package com.daviddelgado.agenda.shared.di
 import android.content.Context
 import com.daviddelgado.agenda.core.data.session.TokenProvider
 import com.daviddelgado.agenda.core.data.session.TokenProviderImpl
+import com.daviddelgado.agenda.shared.navigation.SplashSessionHandler
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.HttpClientEngine
 import org.koin.core.annotation.KoinExperimentalAPI
@@ -16,9 +17,10 @@ import kotlin.test.assertTrue
 /**
  * Grafo de Koin de la app completa. Los modulos usan el DSL por constructor (`singleOf(::Impl)
  * { bind<I>() }`), asi que `verify()` de Koin 4.0.0 revisa los constructores reales, tambien
- * los de las implementaciones tras una interfaz. Siguen siendo lambdas (y por tanto no se
- * revisan por constructor) NetworkConfig, SecureStorage, DatabaseFactory, HttpClient,
- * AgendaDatabase, los DAO y FcmTokenProvider.
+ * los de las implementaciones tras una interfaz. NetworkConfig, SecureStorage, DatabaseFactory,
+ * HttpClient, AgendaDatabase, los DAO y FcmTokenProvider siguen siendo lambdas: `verify()` SI
+ * comprueba el constructor de su tipo principal (por eso `Context`, `HttpClientEngine` y
+ * `HttpClientConfig` estan en `extraTypes`), pero NO ve los `get()` que hay dentro de la lambda.
  * - `Context` lo da `androidContext()`.
  * - `HttpClientEngine` y `HttpClientConfig` estan en `extraTypes` solo por el constructor
  *   propio de `HttpClient`.
@@ -49,5 +51,11 @@ class AppModulesTest {
         assertEquals(1, koin.definitionsDeclaring(TokenProviderImpl::class))
         assertEquals(1, koin.definitionsDeclaring(TokenProvider::class))
         assertEquals(1, koin.definitionsDeclaringAll(TokenProviderImpl::class, TokenProvider::class))
+    }
+
+    @Test
+    fun `SplashSessionHandler tiene exactamente una definicion`() {
+        val koin = koinApplication { modules(appModules) }.koin
+        assertEquals(1, koin.definitionsDeclaring(SplashSessionHandler::class))
     }
 }
