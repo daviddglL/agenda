@@ -830,6 +830,31 @@ Rama `refactor/clean-architecture-modular`, en 6 tareas, siguiendo la estructura
   en este emulador `FirebaseMessaging` falla con `FIS_AUTH_ERROR` al pedir el token FCM
   (`AndroidFcmTokenProvider` lo captura y sigue), así que no hay push posible.
 
+## 7quaterdecies. Sesión 8 (2026-09-30): Koin robusto, features que se degradan en vez de cerrar la app
+
+Mecanismo en tres capas (todo en `shared/.../di/`):
+
+- **Contrato** (`FeatureContract.kt`): `AppFeature { AUTH, TASKS, STREAKS }` y, por feature,
+  el conjunto exacto de tipos que debe declarar su módulo agregado (`FeatureModules.kt`).
+- **Tests**: comparan el contrato con las definiciones reales en ambos sentidos (añadir o
+  quitar una definición sin tocar el contrato rompe un test) y detectan includes duplicados
+  (`allowOverride(false)`). `FeatureAvailabilityTest` cubre la comprobación de arranque.
+- **Comprobación de arranque** (`FeatureAvailability.kt`, llamada desde `initKoin`): tras
+  `startKoin` compara los tipos declarados con el contrato, registra UNA línea de error por
+  feature incompleta (tag `Koin`, con los tipos que faltan) y guarda el conjunto de features
+  no disponibles. Si la propia comprobación falla (p. ej. cambia la API interna de Koin) se
+  registra el error y se asume todo disponible: nunca tumba la app.
+- **Qué ve el usuario**: si `AUTH` no está disponible, pantalla completa "Esta sección no
+  está disponible ahora mismo" en lugar de splash/login/home. En Home, Tareas y Calendario
+  dependen de `TASKS`, Rachas de `STREAKS` y Ajustes de `AUTH`; las pestañas sanas siguen
+  funcionando.
+- **Verificado en el emulador**: quitando `streaksDataModule` de `streaksFeatureModule` la
+  app arranca, Rachas muestra el mensaje, Tareas/Calendario/Ajustes funcionan y logcat
+  muestra `Feature STREAKS no disponible, faltan definiciones de Koin: StreakRepositoryImpl,
+  StreakRepository`. Revertido, todo vuelve a la normalidad.
+- **Punto frágil**: `KoinDefinitions.kt` es el ÚNICO fichero que usa `KoinInternalApi`
+  (para leer los tipos declarados). Revisarlo al actualizar Koin.
+
 ## 8. Producción: URL y certificate pinning (infraestructura lista, sin dominio real)
 
 No hay todavía un backend desplegado en un dominio real, así que no hay pines de

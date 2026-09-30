@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import com.daviddelgado.agenda.core.designsystem.theme.AgendaTheme
 import com.daviddelgado.agenda.feature.auth.presentation.forgotpassword.ForgotPasswordScreen
 import com.daviddelgado.agenda.feature.auth.presentation.login.LoginScreen
@@ -32,6 +33,9 @@ import com.daviddelgado.agenda.feature.auth.presentation.settings.SettingsScreen
 import com.daviddelgado.agenda.feature.streaks.presentation.streaks.StreaksScreen
 import com.daviddelgado.agenda.feature.tasks.presentation.calendar.CalendarScreen
 import com.daviddelgado.agenda.feature.tasks.presentation.tasks.TasksScreen
+import com.daviddelgado.agenda.shared.di.AppFeature
+import com.daviddelgado.agenda.shared.di.FeatureAvailability
+import com.daviddelgado.agenda.shared.navigation.HomeNavigationState
 import com.daviddelgado.agenda.shared.navigation.HomeNavigator
 import com.daviddelgado.agenda.shared.navigation.HomeTab
 import com.daviddelgado.agenda.shared.navigation.SplashSessionHandler
@@ -64,6 +68,11 @@ fun App(onHomeShown: () -> Unit = {}) {
     AgendaTheme {
         var screen by remember { mutableStateOf<AppScreen>(AppScreen.Splash) }
 
+        if (!FeatureAvailability.isAvailable(AppFeature.AUTH)) {
+            FeatureUnavailable(modifier = Modifier.fillMaxSize())
+            return@AgendaTheme
+        }
+
         when (val current = screen) {
             AppScreen.Splash ->
                 SplashScreen(
@@ -87,6 +96,18 @@ fun App(onHomeShown: () -> Unit = {}) {
             AppScreen.Home ->
                 HomeWithTabs(onLoggedOut = { screen = AppScreen.Login() }, onShown = onHomeShown)
         }
+    }
+}
+
+/** Pantalla de relleno cuando el modulo Koin de una feature esta incompleto (ver FeatureAvailability). */
+@Composable
+private fun FeatureUnavailable(modifier: Modifier = Modifier) {
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Text(
+            text = "Esta sección no está disponible ahora mismo",
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -156,16 +177,45 @@ private fun HomeWithTabs(
         },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            when (navState.tab) {
-                HomeTab.TASKS ->
-                    TasksScreen(
-                        initialDate = navState.pendingTaskDate,
-                        onDateConsumed = { navigator.consumePendingTaskDate() },
-                    )
-                HomeTab.CALENDAR -> CalendarScreen(onOpenDay = { navigator.openCalendarDay(it) })
-                HomeTab.STREAKS -> StreaksScreen()
-                HomeTab.SETTINGS -> SettingsScreen(onLoggedOut = onLoggedOut)
-            }
+            HomeTabContent(navigator = navigator, navState = navState, onLoggedOut = onLoggedOut)
         }
+    }
+}
+
+/** Contenido de la pestaña activa; una feature no disponible muestra [FeatureUnavailable]. */
+@Composable
+private fun HomeTabContent(
+    navigator: HomeNavigator,
+    navState: HomeNavigationState,
+    onLoggedOut: () -> Unit,
+) {
+    when (navState.tab) {
+        HomeTab.TASKS ->
+            if (FeatureAvailability.isAvailable(AppFeature.TASKS)) {
+                TasksScreen(
+                    initialDate = navState.pendingTaskDate,
+                    onDateConsumed = { navigator.consumePendingTaskDate() },
+                )
+            } else {
+                FeatureUnavailable(modifier = Modifier.fillMaxSize())
+            }
+        HomeTab.CALENDAR ->
+            if (FeatureAvailability.isAvailable(AppFeature.TASKS)) {
+                CalendarScreen(onOpenDay = { navigator.openCalendarDay(it) })
+            } else {
+                FeatureUnavailable(modifier = Modifier.fillMaxSize())
+            }
+        HomeTab.STREAKS ->
+            if (FeatureAvailability.isAvailable(AppFeature.STREAKS)) {
+                StreaksScreen()
+            } else {
+                FeatureUnavailable(modifier = Modifier.fillMaxSize())
+            }
+        HomeTab.SETTINGS ->
+            if (FeatureAvailability.isAvailable(AppFeature.AUTH)) {
+                SettingsScreen(onLoggedOut = onLoggedOut)
+            } else {
+                FeatureUnavailable(modifier = Modifier.fillMaxSize())
+            }
     }
 }

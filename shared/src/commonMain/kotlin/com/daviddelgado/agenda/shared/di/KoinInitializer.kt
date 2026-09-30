@@ -11,8 +11,12 @@ fun initKoin(
     appDeclaration: KoinAppDeclaration = {},
 ) {
     AgendaLogger.start()
-    startKoin {
-        appDeclaration()
-        modules(appModules + extraModules)
-    }
+    val koinApp =
+        startKoin {
+            appDeclaration()
+            modules(appModules + extraModules)
+        }
+    FeatureAvailability.update(
+        checkFeatures({ koinApp.koin.declaredTypes() }) { AgendaLogger.e("Koin", it) },
+    )
 }
