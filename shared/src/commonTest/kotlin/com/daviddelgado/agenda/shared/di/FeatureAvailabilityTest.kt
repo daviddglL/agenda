@@ -52,4 +52,16 @@ class FeatureAvailabilityTest {
         assertFalse(FeatureAvailability.isAvailable(AppFeature.STREAKS))
         assertTrue(FeatureAvailability.isAvailable(AppFeature.TASKS))
     }
+
+    @Test
+    fun `un Error de la API interna de Koin no se propaga`() {
+        val result = checkFeatures({ throw NoSuchMethodError("x") }, { })
+        assertEquals(emptySet(), result)
+    }
+
+    @Test
+    fun `un logger que lanza no se propaga y se conserva el conjunto calculado`() {
+        val result = checkFeatures({ all - TaskApi::class }, { throw IllegalStateException("log roto") })
+        assertEquals(setOf(AppFeature.TASKS), result)
+    }
 }
