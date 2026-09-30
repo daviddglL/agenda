@@ -258,7 +258,7 @@ tasks 8, calendario 4) necesitan el emulador arrancado (ver sección 1).
 | `:feature:tasks:presentation` | 35 unit + 12 UI | reductor MVI de tareas (formulario completo, selección múltiple, **crear tarea incremental genera sus copias, editar una existente no las regenera**, **buscador por título y filtro por categoría, `SelectAll` respeta el filtro activo**) y de calendario (conteo de tareas por día) + `CalendarLayoutTest` + **Compose (tareas 8): estado vacío, crear tarea, validación, fecha inicial desde el calendario, formulario deslizable, buscador; (calendario 4): la cuadrícula no superpone días, tocar un día selecciona ese día, un día con tareas muestra cuántas tiene, botones de mes con descripción accesible** |
 | `:feature:streaks:data` | 8 | rachas, **periodo de gracia** |
 | `:feature:streaks:presentation` | 3 | reductor MVI de rachas |
-| `:shared` | 8 | `HomeNavigator` (4), `SplashSessionHandler` (3: **registra el token FCM también al recuperar sesión en el splash**) y `AppModulesTest` (1, grafo de Koin; ver 7terdecies para sus límites) |
+| `:shared` | 8 | `HomeNavigator` (4), `SplashSessionHandler` (3: **registra el token FCM también al recuperar sesión en el splash**) y `AppModulesTest` (3) y `FeatureModulesTest` (7) (grafo de Koin; ver 7terdecies) |
 | `:server` | 72 | API completa (incluida `/tasks/ws`), JWT y bcrypt, validación de tareas y de email, rate limiting de `/auth`, `ReminderScheduler` (lógica pura de cuándo toca un recordatorio, 10), `ReminderJob` (bucle en segundo plano, 4), `PushSender` (Firebase, 2), `FcmTokenRoutes` (3), **`PasswordResetRoutesTest` (9: pedir código con email existente/inexistente siempre responde 204, resetear con código correcto permite loguearse con la contraseña nueva, código incorrecto/caducado/agotado tras 5 intentos se rechaza, pedir código dos veces invalida el primero, resetear invalida el refresh token anterior, contraseña nueva de menos de 6 caracteres se rechaza), `EmailSenderTest` (5: `SmtpEmailSender` con `runCatching` ante un host inalcanzable, `NoOpEmailSender`, `provideEmailSender` con credenciales completas/incompletas), `JwtConfigTest` ampliado con el claim `tv` de `token_version`, `AuthRoutesTest` ampliado con `/auth/refresh` rechazando un `token_version` desactualizado** |
 
 Comandos sueltos: `./gradlew :feature:tasks:data:testDebugUnitTest`,
@@ -792,17 +792,23 @@ Rama `refactor/clean-architecture-modular`, en 6 tareas, siguiendo la estructura
   transversal (`domain`, `data`, `presentation`, `designsystem`; ya no existen `core:common`,
   `core:network` ni `core:database`); `shared` con paquetes `di` y `navigation`. Paquetes
   `com.daviddelgado.agenda.<core|feature>.[<feature>.]<capa>.<subpaquete>`.
-- **Test nuevo:** `AppModulesTest` (`shared`, androidUnitTest) usa `verify()` de Koin para
-  comprobar dependencias de constructor. **Alcance limitado:** `verify()` de Koin 4.0.0 solo
-  revisa los constructores del tipo declarado de cada definición. No mira los enlaces con tipo
-  de interfaz (`single<TaskRepository> { ... }`, `AuthRepository`, `StreakRepository`,
-  `TokenProvider`, `FcmTokenProvider`) ni lo que llaman las lambdas, así que no garantiza que
-  todo el grafo resuelva. `extraTypes` lleva `Context` (lo da `androidContext()`),
-  `HttpClientEngine` y `HttpClientConfig` (solo por el constructor propio de `HttpClient`) y
-  `List` (por `NetworkConfig.certificatePinsSha256`, que provee como instancia el módulo de
-  plataforma); `List` es un punto ciego para un futuro parámetro `List` de constructor.
-  **Pendiente:** reforzar el test con `singleOf(::Impl) { bind<I>() }` en los módulos o con un
-  test de resolución real (`koinApplication` + `get()` de los tipos clave).
+- **Tests del grafo de Koin (`shared`, androidUnitTest):** `AppModulesTest` y
+  `FeatureModulesTest`. Los módulos usan `singleOf`/`factoryOf`/`viewModelOf` (+ `bind<I>()`),
+  así que `verify()` de Koin 4.0.0 ve los constructores reales (también los de las
+  implementaciones tras una interfaz). Siguen siendo lambdas `NetworkConfig`, `SecureStorage`,
+  `DatabaseFactory`, `HttpClient`, `AgendaDatabase`, los DAO y `FcmTokenProvider`.
+  `extraTypes`: `Context` (`androidContext()`; lo necesitan las tres features por
+  `DatabaseFactory`), `HttpClientEngine` y `HttpClientConfig` (constructor propio de
+  `HttpClient`) y `List` (`NetworkConfig.certificatePinsSha256`; punto ciego para un futuro
+  parámetro `List`). STREAKS solo necesita `Context`.
+  Cobertura: (1) `verify()` de cada módulo de feature aislado; (2) igualdad exacta por feature
+  entre `FeatureContract.requiredTypes` y los tipos que declara su módulo (sobra o falta algo
+  = test rojo, con `allowOverride(false)`); (3) cargar `appModules` sin overrides (los includes
+  duplicados no redefinen); (4) `FeatureContract.missingTypes` vacío sobre `appModules`;
+  (5) `TokenProviderImpl`/`TokenProvider` son UNA definición `single` con dos tipos. La API
+  interna de Koin (`instanceRegistry`) vive solo en `KoinDefinitions.kt`.
+  **Resuelto** el pendiente de reforzar el test. Límite que queda: no se instancia nada real
+  (`SecureStorage`/`DatabaseFactory` necesitan Android).
 - **Excepciones de dependencia entre features (solo dos):** `auth:data -> tasks:database`
   (logout / borrado de cuenta limpian las tareas locales) y `streaks:data -> tasks:database`
   (la racha se calcula desde las tareas completadas).
