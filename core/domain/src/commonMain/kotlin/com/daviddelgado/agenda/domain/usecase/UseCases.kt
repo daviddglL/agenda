@@ -1,9 +1,7 @@
 package com.daviddelgado.agenda.domain.usecase
 
 import com.daviddelgado.agenda.domain.model.IncrementUnit
-import com.daviddelgado.agenda.domain.model.StreakSummary
 import com.daviddelgado.agenda.domain.model.Task
-import com.daviddelgado.agenda.domain.repository.StreakRepository
 import com.daviddelgado.agenda.domain.repository.TaskRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.DateTimeUnit
@@ -76,8 +74,4 @@ class SyncTasksUseCase(private val repository: TaskRepository) {
 /** Avisos en tiempo real de cambios remotos (WebSocket); cada emision pide un [SyncTasksUseCase]. */
 class ObserveTaskChangesUseCase(private val repository: TaskRepository) {
     operator fun invoke(): Flow<Unit> = repository.observeRemoteChanges()
-}
-
-class ObserveStreakUseCase(private val repository: StreakRepository) {
-    operator fun invoke(): Flow<StreakSummary> = repository.observeStreak()
 }

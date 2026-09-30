@@ -21,7 +21,9 @@ kotlin {
             implementation(projects.feature.auth.presentation)
             implementation(projects.feature.calendar)
             implementation(projects.feature.tasks)
-            implementation(projects.feature.streaks)
+            implementation(projects.feature.streaks.domain)
+            implementation(projects.feature.streaks.data)
+            implementation(projects.feature.streaks.presentation)
             implementation(libs.jetbrains.compose.materialIconsExtended)
             implementation(libs.koin.compose)
         }

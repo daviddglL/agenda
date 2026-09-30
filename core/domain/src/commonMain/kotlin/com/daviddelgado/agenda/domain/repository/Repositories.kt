@@ -1,6 +1,5 @@
 package com.daviddelgado.agenda.domain.repository
 
-import com.daviddelgado.agenda.domain.model.StreakSummary
 import com.daviddelgado.agenda.domain.model.Task
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.LocalDate
@@ -38,8 +37,4 @@ interface TaskRepository {
      * El propio flujo reintenta la conexion si se corta, asi que no completa nunca por si solo.
      */
     fun observeRemoteChanges(): Flow<Unit>
-}
-
-interface StreakRepository {
-    fun observeStreak(): Flow<StreakSummary>
 }

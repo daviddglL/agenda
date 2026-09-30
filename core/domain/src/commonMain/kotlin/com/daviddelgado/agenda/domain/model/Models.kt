@@ -65,9 +65,3 @@ data class Task(
 ) {
     val isIncremental: Boolean get() = increment != null
 }
-
-data class StreakSummary(
-    val currentStreak: Int,
-    val bestStreak: Int,
-    val completedDates: List<LocalDate>,
-)

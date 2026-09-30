@@ -1,0 +1,5 @@
+com.daviddelgado.agenda.domain.model.StreakSummary com.daviddelgado.agenda.feature.streaks.domain.model.StreakSummary
+com.daviddelgado.agenda.domain.repository.StreakRepository com.daviddelgado.agenda.feature.streaks.domain.repository.StreakRepository
+com.daviddelgado.agenda.domain.usecase.ObserveStreakUseCase com.daviddelgado.agenda.feature.streaks.domain.usecase.ObserveStreakUseCase
+com.daviddelgado.agenda.data.streak.StreakRepositoryImpl com.daviddelgado.agenda.feature.streaks.data.repository.StreakRepositoryImpl
+com.daviddelgado.agenda.feature.streaks.StreaksScreen com.daviddelgado.agenda.feature.streaks.presentation.streaks.StreaksScreen

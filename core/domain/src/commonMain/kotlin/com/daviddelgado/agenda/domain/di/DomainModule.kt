@@ -4,7 +4,6 @@ import com.daviddelgado.agenda.domain.usecase.DeleteAllTasksUseCase
 import com.daviddelgado.agenda.domain.usecase.DeleteTaskUseCase
 import com.daviddelgado.agenda.domain.usecase.DeleteTasksUseCase
 import com.daviddelgado.agenda.domain.usecase.GenerateTaskRepetitionsUseCase
-import com.daviddelgado.agenda.domain.usecase.ObserveStreakUseCase
 import com.daviddelgado.agenda.domain.usecase.ObserveTaskChangesUseCase
 import com.daviddelgado.agenda.domain.usecase.ObserveTasksUseCase
 import com.daviddelgado.agenda.domain.usecase.SyncTasksUseCase
@@ -23,5 +22,4 @@ val domainModule =
         factory { ToggleTaskCompletionUseCase(get()) }
         factory { SyncTasksUseCase(get()) }
         factory { ObserveTaskChangesUseCase(get()) }
-        factory { ObserveStreakUseCase(get()) }
     }

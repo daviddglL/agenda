@@ -6,7 +6,9 @@ import com.daviddelgado.agenda.feature.auth.data.di.authDataModule
 import com.daviddelgado.agenda.feature.auth.domain.di.authDomainModule
 import com.daviddelgado.agenda.feature.auth.presentation.di.authPresentationModule
 import com.daviddelgado.agenda.feature.calendar.calendarModule
-import com.daviddelgado.agenda.feature.streaks.streaksModule
+import com.daviddelgado.agenda.feature.streaks.data.di.streaksDataModule
+import com.daviddelgado.agenda.feature.streaks.domain.di.streaksDomainModule
+import com.daviddelgado.agenda.feature.streaks.presentation.di.streaksPresentationModule
 import com.daviddelgado.agenda.feature.tasks.tasksModule
 import org.koin.core.module.Module
 import org.koin.dsl.module
@@ -27,6 +29,8 @@ val appModules: List<Module> =
         authPresentationModule,
         calendarModule,
         tasksModule,
-        streaksModule,
+        streaksDomainModule,
+        streaksDataModule,
+        streaksPresentationModule,
         sharedModule,
     )

@@ -1,11 +1,9 @@
 package com.daviddelgado.agenda.data.di
 
 import com.daviddelgado.agenda.data.auth.TokenProviderImpl
-import com.daviddelgado.agenda.data.streak.StreakRepositoryImpl
 import com.daviddelgado.agenda.data.task.TaskRepositoryImpl
 import com.daviddelgado.agenda.database.AgendaDatabase
 import com.daviddelgado.agenda.database.buildAgendaDatabase
-import com.daviddelgado.agenda.domain.repository.StreakRepository
 import com.daviddelgado.agenda.domain.repository.TaskRepository
 import com.daviddelgado.agenda.network.TokenProvider
 import com.daviddelgado.agenda.network.api.TaskApi
@@ -34,5 +32,4 @@ val dataModule =
         single { get<AgendaDatabase>().pendingDeletionDao() }
 
         single<TaskRepository> { TaskRepositoryImpl(get(), get(), get()) }
-        single<StreakRepository> { StreakRepositoryImpl(get()) }
     }
