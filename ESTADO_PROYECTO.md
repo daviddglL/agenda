@@ -258,7 +258,7 @@ tasks 8, calendario 4) necesitan el emulador arrancado (ver sección 1).
 | `:feature:tasks:presentation` | 35 unit + 12 UI | reductor MVI de tareas (formulario completo, selección múltiple, **crear tarea incremental genera sus copias, editar una existente no las regenera**, **buscador por título y filtro por categoría, `SelectAll` respeta el filtro activo**) y de calendario (conteo de tareas por día) + `CalendarLayoutTest` + **Compose (tareas 8): estado vacío, crear tarea, validación, fecha inicial desde el calendario, formulario deslizable, buscador; (calendario 4): la cuadrícula no superpone días, tocar un día selecciona ese día, un día con tareas muestra cuántas tiene, botones de mes con descripción accesible** |
 | `:feature:streaks:data` | 8 | rachas, **periodo de gracia** |
 | `:feature:streaks:presentation` | 3 | reductor MVI de rachas |
-| `:shared` | 8 | `HomeNavigator` (4), `SplashSessionHandler` (3: **registra el token FCM también al recuperar sesión en el splash**) y `AppModulesTest` (3) y `FeatureModulesTest` (7) (grafo de Koin; ver 7terdecies) |
+| `:shared` | 26 | `HomeNavigator` (4), `SplashSessionHandler` (3: **registra el token FCM también al recuperar sesión en el splash**), `AppModulesTest` (4), `FeatureModulesTest` (7) y `FeatureAvailabilityTest` (8: comprobación de arranque) (grafo de Koin; ver 7terdecies) |
 | `:server` | 72 | API completa (incluida `/tasks/ws`), JWT y bcrypt, validación de tareas y de email, rate limiting de `/auth`, `ReminderScheduler` (lógica pura de cuándo toca un recordatorio, 10), `ReminderJob` (bucle en segundo plano, 4), `PushSender` (Firebase, 2), `FcmTokenRoutes` (3), **`PasswordResetRoutesTest` (9: pedir código con email existente/inexistente siempre responde 204, resetear con código correcto permite loguearse con la contraseña nueva, código incorrecto/caducado/agotado tras 5 intentos se rechaza, pedir código dos veces invalida el primero, resetear invalida el refresh token anterior, contraseña nueva de menos de 6 caracteres se rechaza), `EmailSenderTest` (5: `SmtpEmailSender` con `runCatching` ante un host inalcanzable, `NoOpEmailSender`, `provideEmailSender` con credenciales completas/incompletas), `JwtConfigTest` ampliado con el claim `tv` de `token_version`, `AuthRoutesTest` ampliado con `/auth/refresh` rechazando un `token_version` desactualizado** |
 
 Comandos sueltos: `./gradlew :feature:tasks:data:testDebugUnitTest`,
@@ -796,7 +796,9 @@ Rama `refactor/clean-architecture-modular`, en 6 tareas, siguiendo la estructura
   `FeatureModulesTest`. Los módulos usan `singleOf`/`factoryOf`/`viewModelOf` (+ `bind<I>()`),
   así que `verify()` de Koin 4.0.0 ve los constructores reales (también los de las
   implementaciones tras una interfaz). Siguen siendo lambdas `NetworkConfig`, `SecureStorage`,
-  `DatabaseFactory`, `HttpClient`, `AgendaDatabase`, los DAO y `FcmTokenProvider`.
+  `DatabaseFactory`, `HttpClient`, `AgendaDatabase`, los DAO y `FcmTokenProvider`: `verify()` SÍ
+  comprueba el constructor de su tipo principal (por eso `Context`, `HttpClientEngine` y
+  `HttpClientConfig` van en `extraTypes`), pero NO ve los `get()` dentro de la lambda.
   `extraTypes`: `Context` (`androidContext()`; lo necesitan las tres features por
   `DatabaseFactory`), `HttpClientEngine` y `HttpClientConfig` (constructor propio de
   `HttpClient`) y `List` (`NetworkConfig.certificatePinsSha256`; punto ciego para un futuro
@@ -852,6 +854,13 @@ Mecanismo en tres capas (todo en `shared/.../di/`):
   app arranca, Rachas muestra el mensaje, Tareas/Calendario/Ajustes funcionan y logcat
   muestra `Feature STREAKS no disponible, faltan definiciones de Koin: StreakRepositoryImpl,
   StreakRepository`. Revertido, todo vuelve a la normalidad.
+- **Puntos ciegos que quedan**: los `get()` dentro de lambdas (`createHttpClient`,
+  `buildAgendaDatabase`) solo se comprueban por presencia del tipo; los módulos `actual` de iOS
+  no se compilan ni se prueban en Windows; `declaredTypes` ignora los qualifiers; el contrato es
+  manual, así que quitar una definición Y su entrada del contrato a la vez pasa los tests;
+  `SplashSessionHandler` entra en la comprobación de arranque como requisito de `AUTH`
+  (`appEntryTypes`, no en `requiredTypes`); y `AgendaFirebaseMessagingService.onNewToken` ya
+  no resuelve nada si `AUTH` no está disponible.
 - **Punto frágil**: `KoinDefinitions.kt` es el ÚNICO fichero que usa `KoinInternalApi`
   (para leer los tipos declarados). Revisarlo al actualizar Koin.
 

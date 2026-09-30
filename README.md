@@ -83,7 +83,7 @@ En debug, la app del emulador apunta al servidor local (`http://10.0.2.2:8080/`)
 | Variable | Para qué |
 |---|---|
 | `AGENDA_JWT_SECRET` | Secreto para firmar los JWT. Si falta, usa uno de desarrollo y avisa en el log: **fíjalo siempre en producción** |
-| `AGENDA_DB_URL` | URL JDBC de la base de datos (por defecto H2 en fichero, `server/data/`; admite p. ej. Postgres) |
+| `AGENDA_DB_URL` | URL JDBC de la base de datos (por defecto H2 en fichero, `server/data/`; hoy solo funciona H2: el driver está fijado en `DatabaseFactory.kt` y solo hay dependencia de H2, así que otra base de datos necesita su driver y un cambio de código) |
 | `AGENDA_CORS_ALLOWED_ORIGINS` | Orígenes permitidos por CORS |
 | `AGENDA_TRUSTED_PROXIES` | Proxies de confianza para el rate limiting por IP |
 | `AGENDA_SMTP_HOST`, `_PORT`, `_USERNAME`, `_PASSWORD`, `_FROM` | Envío de emails de recuperación de contraseña |
